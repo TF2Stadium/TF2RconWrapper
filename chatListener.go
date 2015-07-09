@@ -25,7 +25,7 @@ func proccessMessage(text string) ChatMessage {
 
 type RconChatListener struct {
 	conn    *net.UDPConn
-	Channel chan ChatMessage
+	channel chan ChatMessage
 	exit    chan bool
 }
 
@@ -68,9 +68,13 @@ func (r *RconChatListener) readStrings() {
 			}
 
 			message := string(buff[0:n])
-			r.Channel <- proccessMessage(message)
+			r.channel <- proccessMessage(message)
 		}
 	}
+}
+
+func (r *RconChatListener) GetNext() ChatMessage {
+	return <-r.channel
 }
 
 func (r *RconChatListener) Close() {
