@@ -1,8 +1,10 @@
 package TF2RconWrapper
 
 type Player struct {
-	PlayerID string
+	UserID   string
 	Username string
-	Slot     string
 	SteamID  string
+	Ping     int
+	State    string
+	Ip       string
 }

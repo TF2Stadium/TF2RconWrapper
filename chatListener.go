@@ -26,7 +26,7 @@ func proccessMessage(text string) ChatMessage {
 type RconChatListener struct {
 	conn    *net.UDPConn
 	Channel chan ChatMessage
-	exit    chan int
+	exit    chan bool
 }
 
 func NewRconChatListener(port int) (*RconChatListener, error) {
@@ -41,7 +41,7 @@ func NewRconChatListener(port int) (*RconChatListener, error) {
 	}
 
 	ch := make(chan ChatMessage)
-	exit := make(chan int)
+	exit := make(chan bool)
 
 	listener := &RconChatListener{conn, ch, exit}
 	go listener.readStrings()
@@ -57,8 +57,13 @@ func (r *RconChatListener) readStrings() {
 		case <-r.exit:
 			return
 		default:
+			r.conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 			n, _, err := r.conn.ReadFromUDP(buff)
 			if err != nil {
+				if typedErr, ok := err.(*net.OpError); ok && typedErr.Timeout() {
+					continue
+				}
+
 				fmt.Println("Error receiving server chat data: ", err)
 			}
 
@@ -69,8 +74,6 @@ func (r *RconChatListener) readStrings() {
 }
 
 func (r *RconChatListener) Close() {
-	fmt.Print("started close")
-	r.exit <- 1
+	r.exit <- true
 	r.conn.Close()
-	fmt.Print("ended")
 }

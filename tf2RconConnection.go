@@ -2,13 +2,15 @@ package TF2RconWrapper
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/james4k/rcon"
 )
 
 type TF2RconConnection struct {
-	rc *rcon.RemoteConsole
+	rc   *rcon.RemoteConsole
+	host string
 }
 
 func (c *TF2RconConnection) Query(req string) (string, error) {
@@ -41,19 +43,36 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 }
 
 func (c *TF2RconConnection) GetPlayers() []Player {
-	playerString, _ := c.Query("users")
+	playerString, _ := c.Query("status")
 	res := strings.Split(playerString, "\n")
-	res = res[1 : len(res)-2]
+	for !strings.HasPrefix(res[0], "#") {
+		res = res[1:]
+	}
+	res = res[1:]
 	var list []Player
 	for _, elem := range res {
-		data := strings.Split(elem, ":")
-		list = append(list, Player{data[1], data[2], data[0], ""})
+		if elem == "" {
+			continue
+		}
+		elems := strings.Fields(elem)[1:]
+		userID := elems[0]
+		name := elems[1]
+		name = name[1 : len(name)-1]
+		uniqueID := elems[2]
+		if uniqueID == "BOT" {
+			list = append(list, Player{userID, name, uniqueID, 0, "active", ""})
+		} else {
+			ping, _ := strconv.Atoi(elems[4])
+			state := elems[6]
+			ip := elems[7]
+			list = append(list, Player{userID, name, uniqueID, ping, state, ip})
+		}
 	}
 	return list
 }
 
 func (c *TF2RconConnection) KickPlayer(p Player, message string) error {
-	query := "kickid " + p.PlayerID
+	query := "kickid " + p.UserID
 	if message != "" {
 		query += " \"" + message + "\""
 	}
@@ -62,7 +81,7 @@ func (c *TF2RconConnection) KickPlayer(p Player, message string) error {
 }
 
 func (c *TF2RconConnection) BanPlayer(minutes int, p Player, message string) error {
-	query := "banid " + fmt.Sprintf("%v", minutes) + " " + p.PlayerID
+	query := "banid " + fmt.Sprintf("%v", minutes) + " " + p.UserID
 	if message != "" {
 		query += " \"" + message + "\""
 	}
@@ -71,21 +90,55 @@ func (c *TF2RconConnection) BanPlayer(minutes int, p Player, message string) err
 }
 
 func (c *TF2RconConnection) UnbanPlayer(p Player) error {
-	query := "unbanid " + p.PlayerID
+	query := "unbanid " + p.UserID
 	_, err := c.Query(query)
 	return err
 }
 
 func (c *TF2RconConnection) Say(message string) error {
-	query := "say \"" + message + "\""
+	query := "say " + message
 	_, err := c.Query(query)
 	return err
 }
 
-func (c *TF2RconConnection) ChangePassword(password string) error {
+func (c *TF2RconConnection) ChangeRconPassword(password string) error {
+	query := "rcon_password \"" + password + "\""
+	_, err := c.Query(query)
+
+	if err == nil {
+		c.rc.Close()
+		newConnection, _ := rcon.Dial(c.host, password)
+		c.rc = newConnection
+	}
+
+	return err
+}
+
+func (c *TF2RconConnection) ChangeServerPassword(password string) error {
 	query := "sv_password \"" + password + "\""
 	_, err := c.Query(query)
 	return err
+}
+
+func (c *TF2RconConnection) RedirectLogs(ip string, port string) error {
+	query := "logaddress_add " + ip + ":" + port
+	_, err := c.Query(query)
+	return err
+}
+
+func (c *TF2RconConnection) Close() {
+	c.rc.Close()
+}
+
+func (c *TF2RconConnection) ExecConfig(config string) error {
+	lines := strings.Split(config, "\n")
+	for _, line := range lines {
+		_, err := c.Query(line)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) {
@@ -93,5 +146,5 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &TF2RconConnection{rc}, nil
+	return &TF2RconConnection{rc, address}, nil
 }
