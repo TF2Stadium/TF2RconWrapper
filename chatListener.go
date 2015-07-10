@@ -3,29 +3,11 @@ package TF2RconWrapper
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"strconv"
 	"time"
 )
-
-// ChatMessage represents a chat message in a TF2 server, and contains a timestamp and a message.
-// The message can be a player message that contains the sender's username, steamid and other info
-// or a server message.
-type ChatMessage struct {
-	Timestamp time.Time
-	Message   string
-}
-
-func proccessMessage(text string) ChatMessage {
-	text = text[7:]
-	timeText := text[:21]
-	message := text[23:]
-
-	const refTime = "01/02/2006 -  15:04:05"
-
-	timeObj, _ := time.Parse(refTime, timeText)
-
-	return ChatMessage{timeObj, message}
-}
 
 // RconChatListener maintains an UDP server that receives redirected chat messages from TF2 servers
 type RconChatListener struct {
@@ -35,6 +17,7 @@ type RconChatListener struct {
 	addr    *net.UDPAddr
 	localip string
 	port    string
+	rng     *rand.Rand
 }
 
 // NewRconChatListener builds a new RconChatListener. Its arguments are localip (the ip of this server) and
@@ -48,7 +31,9 @@ func NewRconChatListener(localip, port string) (*RconChatListener, error) {
 	exit := make(chan bool)
 	servers := make(map[string]*ServerListener)
 
-	listener := &RconChatListener{nil, servers, exit, addr, localip, port}
+	rng := rand.New(rand.NewSource(time.Now().Unix()))
+
+	listener := &RconChatListener{nil, servers, exit, addr, localip, port, rng}
 	listener.startListening()
 	return listener, nil
 }
@@ -73,7 +58,7 @@ func (r *RconChatListener) readStrings() {
 			return
 		default:
 			r.conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
-			n, addr, err := r.conn.ReadFromUDP(buff)
+			n, _, err := r.conn.ReadFromUDP(buff)
 			if err != nil {
 				if typedErr, ok := err.(*net.OpError); ok && typedErr.Timeout() {
 					continue
@@ -82,17 +67,23 @@ func (r *RconChatListener) readStrings() {
 				fmt.Println("Error receiving server chat data: ", err)
 			}
 
-			key := addr.String()
+			message := buff[0:n]
 
-			s, ok := r.servers[key]
+			messageObj, secret, err := proccessMessage(message)
+
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			s, ok := r.servers[secret]
 
 			if !ok {
 				log.Println("Received chat info from an unregistered TF2 server")
 				continue
 			}
 
-			message := string(buff[0:n])
-			s.messages <- proccessMessage(message)
+			s.messages <- messageObj
 		}
 	}
 }
@@ -107,11 +98,22 @@ func (r *RconChatListener) Close() {
 // particular TF2 server
 func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerListener {
 
-	s := &ServerListener{make(chan ChatMessage), m.host, r}
+	secret := strconv.Itoa(r.rng.Intn(999998) + 1)
 
-	r.servers[m.host] = s
+	_, ok := r.servers[secret]
+	for ok {
+		secret = strconv.Itoa(r.rng.Intn(999998) + 1)
+		_, ok = r.servers[secret]
+	}
 
-	go m.RedirectLogs(r.localip, r.port)
+	s := &ServerListener{make(chan ChatMessage), m.host, secret, r}
+
+	r.servers[secret] = s
+
+	go func() {
+		m.Query("sv_logsecret " + secret)
+		m.RedirectLogs(r.localip, r.port)
+	}()
 
 	return s
 }
@@ -121,6 +123,7 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 type ServerListener struct {
 	messages chan ChatMessage
 	host     string
+	secret   string
 	listener *RconChatListener
 }
 
