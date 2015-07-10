@@ -8,11 +8,13 @@ import (
 	"github.com/james4k/rcon"
 )
 
+// TF2RconConnection represents a rcon connection to a TF2 server
 type TF2RconConnection struct {
 	rc   *rcon.RemoteConsole
 	host string
 }
 
+// Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
 	reqID, reqErr := c.rc.Write(req)
 	if reqErr != nil {
@@ -42,6 +44,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 	return resp, nil
 }
 
+// GetPlayers returns a list of players in the server. Includes bots.
 func (c *TF2RconConnection) GetPlayers() []Player {
 	playerString, _ := c.Query("status")
 	res := strings.Split(playerString, "\n")
@@ -71,6 +74,7 @@ func (c *TF2RconConnection) GetPlayers() []Player {
 	return list
 }
 
+// KickPlayer kicks a player
 func (c *TF2RconConnection) KickPlayer(p Player, message string) error {
 	query := "kickid " + p.UserID
 	if message != "" {
@@ -80,6 +84,7 @@ func (c *TF2RconConnection) KickPlayer(p Player, message string) error {
 	return err
 }
 
+// BanPlayer bans a player
 func (c *TF2RconConnection) BanPlayer(minutes int, p Player, message string) error {
 	query := "banid " + fmt.Sprintf("%v", minutes) + " " + p.UserID
 	if message != "" {
@@ -89,18 +94,22 @@ func (c *TF2RconConnection) BanPlayer(minutes int, p Player, message string) err
 	return err
 }
 
+// UnbanPlayer unbans a player
 func (c *TF2RconConnection) UnbanPlayer(p Player) error {
 	query := "unbanid " + p.UserID
 	_, err := c.Query(query)
 	return err
 }
 
+// Say sends a message to the TF2 server chat
 func (c *TF2RconConnection) Say(message string) error {
 	query := "say " + message
 	_, err := c.Query(query)
 	return err
 }
 
+// ChangeRconPassword changes the rcon password and updates the current connection
+// to use the new password
 func (c *TF2RconConnection) ChangeRconPassword(password string) error {
 	query := "rcon_password \"" + password + "\""
 	_, err := c.Query(query)
@@ -114,22 +123,27 @@ func (c *TF2RconConnection) ChangeRconPassword(password string) error {
 	return err
 }
 
+// ChangeServerPassword changes the server password
 func (c *TF2RconConnection) ChangeServerPassword(password string) error {
 	query := "sv_password \"" + password + "\""
 	_, err := c.Query(query)
 	return err
 }
 
+// RedirectLogs send the logaddress_add command
 func (c *TF2RconConnection) RedirectLogs(ip string, port string) error {
 	query := "logaddress_add " + ip + ":" + port
 	_, err := c.Query(query)
 	return err
 }
 
+// Close closes the connection
 func (c *TF2RconConnection) Close() {
 	c.rc.Close()
 }
 
+// ExecConfig accepts a string and executes its lines one by one. Assumes
+// UNiX line endings
 func (c *TF2RconConnection) ExecConfig(config string) error {
 	lines := strings.Split(config, "\n")
 	for _, line := range lines {
@@ -141,6 +155,8 @@ func (c *TF2RconConnection) ExecConfig(config string) error {
 	return nil
 }
 
+// NewTF2RconConnection builds a new TF2RconConnection to a server at address ("ip:port") using
+// a rcon_password password
 func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) {
 	rc, err := rcon.Dial(address, password)
 	if err != nil {
