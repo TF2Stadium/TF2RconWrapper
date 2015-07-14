@@ -123,6 +123,13 @@ func (c *TF2RconConnection) ChangeRconPassword(password string) error {
 	return err
 }
 
+// ChangeMap changes the map
+func (c *TF2RconConnection) ChangeMap(mapname string) error {
+	query := "changelevel \"" + mapname + "\""
+	_, err := c.Query(query)
+	return err
+}
+
 // ChangeServerPassword changes the server password
 func (c *TF2RconConnection) ChangeServerPassword(password string) error {
 	query := "sv_password \"" + password + "\""
