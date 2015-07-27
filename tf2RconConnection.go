@@ -1,6 +1,7 @@
 package TF2RconWrapper
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -126,7 +127,10 @@ func (c *TF2RconConnection) ChangeRconPassword(password string) error {
 // ChangeMap changes the map
 func (c *TF2RconConnection) ChangeMap(mapname string) error {
 	query := "changelevel \"" + mapname + "\""
-	_, err := c.Query(query)
+	res, err := c.Query(query)
+	if res != "" {
+		return errors.New(res)
+	}
 	return err
 }
 
