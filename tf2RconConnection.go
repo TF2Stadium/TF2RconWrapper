@@ -3,6 +3,7 @@ package TF2RconWrapper
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -25,8 +26,8 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 
 	resp, respID, respErr := c.rc.Read()
 	if respErr != nil {
-		fmt.Print(reqErr)
-		return "", reqErr
+		fmt.Print(respErr)
+		return "", respErr
 	}
 
 	// retry until you get a response
@@ -36,7 +37,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 		} else {
 			resp, respID, respErr = c.rc.Read()
 			if respErr != nil {
-				fmt.Print(reqErr)
+				fmt.Print(respErr)
 				return "", reqErr
 			}
 		}
@@ -47,7 +48,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 
 // GetPlayers returns a list of players in the server. Includes bots.
 func (c *TF2RconConnection) GetPlayers() []Player {
-	playerString, _ := c.Query("status")
+	playerString, err := c.Query("status")
 	res := strings.Split(playerString, "\n")
 	for !strings.HasPrefix(res[0], "#") {
 		res = res[1:]
@@ -57,6 +58,9 @@ func (c *TF2RconConnection) GetPlayers() []Player {
 	for _, elem := range res {
 		if elem == "" {
 			continue
+		}
+		if !strings.HasPrefix(elem, "#") {
+			break
 		}
 		elems := strings.Fields(elem)[1:]
 		userID := elems[0]
