@@ -47,7 +47,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 
 // GetPlayers returns a list of players in the server. Includes bots.
 func (c *TF2RconConnection) GetPlayers() []Player {
-	playerString, err := c.Query("status")
+	playerString, _ := c.Query("status")
 	res := strings.Split(playerString, "\n")
 	for !strings.HasPrefix(res[0], "#") {
 		res = res[1:]
