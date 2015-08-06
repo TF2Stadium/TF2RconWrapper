@@ -19,24 +19,28 @@ type TF2RconConnection struct {
 func (c *TF2RconConnection) Query(req string) (string, error) {
 	reqID, reqErr := c.rc.Write(req)
 	if reqErr != nil {
-		fmt.Print(reqErr)
+		// log.Println(reqErr)
 		return "", reqErr
 	}
 
 	resp, respID, respErr := c.rc.Read()
 	if respErr != nil {
-		fmt.Print(respErr)
+		// log.Println(respErr)
 		return "", respErr
 	}
 
-	// retry until you get a response
+	counter := 10
+	// retry 10 times
 	for {
 		if reqID == respID {
 			break
+		} else if counter < 0 {
+			return "", errors.New("Couldn't get a response.")
 		} else {
+			counter--
 			resp, respID, respErr = c.rc.Read()
 			if respErr != nil {
-				fmt.Print(respErr)
+				// log.Println(respErr)
 				return "", reqErr
 			}
 		}
@@ -46,8 +50,12 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 }
 
 // GetPlayers returns a list of players in the server. Includes bots.
-func (c *TF2RconConnection) GetPlayers() []Player {
-	playerString, _ := c.Query("status")
+func (c *TF2RconConnection) GetPlayers() ([]Player, error) {
+	playerString, err := c.Query("status")
+	if err != nil {
+		return nil, err
+	}
+
 	res := strings.Split(playerString, "\n")
 	for !strings.HasPrefix(res[0], "#") {
 		res = res[1:]
@@ -75,7 +83,7 @@ func (c *TF2RconConnection) GetPlayers() []Player {
 			list = append(list, Player{userID, name, uniqueID, ping, state, ip})
 		}
 	}
-	return list
+	return list, nil
 }
 
 // KickPlayer kicks a player
