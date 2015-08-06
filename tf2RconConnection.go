@@ -3,7 +3,6 @@ package TF2RconWrapper
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
