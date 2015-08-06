@@ -3,8 +3,10 @@ package TF2RconWrapper
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/james4k/rcon"
 )
@@ -19,13 +21,15 @@ type TF2RconConnection struct {
 func (c *TF2RconConnection) Query(req string) (string, error) {
 	reqID, reqErr := c.rc.Write(req)
 	if reqErr != nil {
-		fmt.Print(reqErr)
+		//fmt.Print(respErr)
+		log.Println(reqErr)
 		return "", reqErr
 	}
 
 	resp, respID, respErr := c.rc.Read()
 	if respErr != nil {
-		fmt.Print(respErr)
+		//fmt.Print(respErr)
+		log.Println(reqErr)
 		return "", respErr
 	}
 
@@ -36,7 +40,8 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 		} else {
 			resp, respID, respErr = c.rc.Read()
 			if respErr != nil {
-				fmt.Print(respErr)
+				//fmt.Print(respErr)
+				log.Println(reqErr)
 				return "", reqErr
 			}
 		}
@@ -47,7 +52,12 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 
 // GetPlayers returns a list of players in the server. Includes bots.
 func (c *TF2RconConnection) GetPlayers() []Player {
-	playerString, _ := c.Query("status")
+	playerString, err := c.Query("status")
+	for err != nil {
+		time.Sleep(time.Second * 1)
+		playerString, err = c.Query("status")
+	}
+	log.Println(err)
 	res := strings.Split(playerString, "\n")
 	for !strings.HasPrefix(res[0], "#") {
 		res = res[1:]
