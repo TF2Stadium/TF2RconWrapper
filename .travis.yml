@@ -1,0 +1,7 @@
+language: go
+script:
+  - go test -v -covermode=count -coverprofile=coverage.out
+  - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+env:
+  global:
+    secure: pOzFh/tmot+BvEbmWkbMhALqDIGAlbZR6XTgp6SMTtDT97wnoLV2JP0nSlw65p4RIPTFFj9zn1og6vEMrKokKuzkQy0TKm38/wwt77Zd0uJFyZhza+ymFypp/ZOarRToAwCXz5YsIAI1kBr7PEa66LWJNhOVqLEF5UwI6jiHzDSC749UOHGA2GNC/Tb+zj/ZdMI4BxWpzeDUYITTOW5zcD1bG/1h/AmghgOmuWRvAes1kxqLdHnEHQZOAaRh9j1jNJzlQ4FBEsOUbWoM+qVHleiXTP5KorR+8xJw8gaX4sH/kEzBPdjVH0fb36twEw8u+3Z+FQXcJEyXd0V0wfgbb3gMGTt2jeTFNSk0kVdc95/EUP9Zbb5yo7KniifyL2RqolNso+gAIC15CF70m5ihZWPBmfX0r1p45wOYTQ/wuNeaXzVgP6UkGTR82SA8gOCBaSR5Ewy9UuaN2ALy/m+/4ON5UgrXfMelsYZy3w+6pKwixCYZ5lBmctBvbG/+BX4T7AVVP42xVVzHKVCzNuEanDiof8/xnMGYuG3IZzT5bCzR5l5tiNdr+qcmMXteXNtrZp+AZlezLqjQxJbxydA2aONSKJNBBWY4HWmSu030rEZVAniwr82jYFHJU13y+PnNngGVRQf/ZvjT0ub9ueJ2oHBAZXGWmh+NL/+NUQygTlM=
