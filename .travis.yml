@@ -1,5 +1,6 @@
 language: go
 install:
+  - go get github.com/james4k/rcon
   - go get github.com/mattn/goveralls
 script:
   - go test -v -covermode=count -coverprofile=coverage.out
