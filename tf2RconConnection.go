@@ -15,6 +15,10 @@ type TF2RconConnection struct {
 	host string
 }
 
+var (
+	UnknownCommandError = errors.New("Unknown Command")
+)
+
 // Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
 	reqID, reqErr := c.rc.Write(req)
@@ -44,6 +48,10 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 				return "", reqErr
 			}
 		}
+	}
+
+	if strings.HasPrefix(resp, "Unknown command") {
+		return "", UnknownCommandError
 	}
 
 	return resp, nil
