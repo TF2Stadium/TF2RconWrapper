@@ -83,7 +83,7 @@ func (r *RconChatListener) readStrings() {
 				continue
 			}
 
-			s.messages <- messageObj
+			s.Messages <- messageObj
 		}
 	}
 }
@@ -121,13 +121,8 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 // ServerListener represents a listener that receives chat messages from a particular
 // TF2 server. It's built and managed by an RconChatListener instance.
 type ServerListener struct {
-	messages chan ChatMessage
+	Messages chan ChatMessage
 	host     string
 	secret   string
 	listener *RconChatListener
-}
-
-// GetNext blocks until a chat message is received and then returns it
-func (s *ServerListener) GetNext() ChatMessage {
-	return <-s.messages
 }
