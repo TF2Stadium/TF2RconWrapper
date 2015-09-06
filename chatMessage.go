@@ -44,8 +44,15 @@ type PlayerData struct {
 	Class string
 }
 
+const (
+	playerGlobalMessage = iota
+	playerTeamMessage   = iota
+	playerChangedClass  = iota
+	playerChangedTeam   = iota
+)
+
 type ParsedMsg struct {
-	Type string
+	Type int
 	Data PlayerData
 }
 
@@ -92,7 +99,7 @@ func compileRegexes() {
 }
 
 func Parse(message string) ParsedMsg {
-	r := ParsedMsg{}
+	r := ParsedMsg{Type: -1}
 	var m []string
 
 	// we don't need to compile them everytime...
@@ -105,29 +112,29 @@ func Parse(message string) ParsedMsg {
 		m = rPlayerGlobalMessage.FindStringSubmatch(message)
 
 		r.Data.Text = m[5]
-		r.Type = "playerGlobalMessage"
+		r.Type = playerGlobalMessage
 
 	case rPlayerTeamMessage.MatchString(message):
 		m = rPlayerTeamMessage.FindStringSubmatch(message)
 
 		r.Data.Text = m[5]
-		r.Type = "playerTeamMessage"
+		r.Type = playerTeamMessage
 
 	case rPlayerChangedClass.MatchString(message):
 		m = rPlayerChangedClass.FindStringSubmatch(message)
 
 		r.Data.Class = m[5]
-		r.Type = "playerChangedClass"
+		r.Type = playerChangedClass
 
 	case rPlayerChangedTeam.MatchString(message):
 		m = rPlayerChangedTeam.FindStringSubmatch(message)
 
 		r.Data.NewTeam = m[5]
-		r.Type = "playerChangedTeam"
+		r.Type = playerChangedTeam
 	}
 
 	// fields used in all matches
-	if r.Type != "" {
+	if r.Type != -1 {
 		r.Data.Username = m[1]
 		r.Data.SteamId = m[3]
 		r.Data.UserId = m[2]
