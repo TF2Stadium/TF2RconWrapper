@@ -24,7 +24,7 @@ func TestParse(t *testing.T) {
 
 		// 0 = changed team
 		case 0:
-			assert.Equal(t, m.Type, playerChangedTeam)
+			assert.Equal(t, m.Type, PlayerChangedTeam)
 
 			assert.Equal(t, m.Data.Team, "Unassigned")
 			assert.Equal(t, m.Data.NewTeam, "Red")
@@ -35,41 +35,41 @@ func TestParse(t *testing.T) {
 
 			// 1 = changed class
 		case 1:
-			assert.Equal(t, m.Type, playerChangedClass)
+			assert.Equal(t, m.Type, PlayerChangedClass)
 			assert.Equal(t, m.Data.Class, "scout")
 
 			// 2 = changed class
 		case 2:
-			assert.Equal(t, m.Type, playerChangedClass)
+			assert.Equal(t, m.Type, PlayerChangedClass)
 			assert.Equal(t, m.Data.Class, "soldier")
 
 			// 3 = global message
 		case 3:
-			assert.Equal(t, m.Type, playerGlobalMessage)
+			assert.Equal(t, m.Type, PlayerGlobalMessage)
 
 			assert.Equal(t, m.Data.Team, "Red")
 			assert.Equal(t, m.Data.Text, "hello gringos")
 
 			// 4 = team message
 		case 4:
-			assert.Equal(t, m.Type, playerTeamMessage)
+			assert.Equal(t, m.Type, PlayerTeamMessage)
 			assert.Equal(t, m.Data.Text, "ufo porno")
 
 			// 5 = changed class
 		case 5:
-			assert.Equal(t, m.Type, playerChangedClass)
+			assert.Equal(t, m.Type, PlayerChangedClass)
 			assert.Equal(t, m.Data.Class, "sniper")
 
 			// 6 = changed team
 		case 6:
-			assert.Equal(t, m.Type, playerChangedTeam)
+			assert.Equal(t, m.Type, PlayerChangedTeam)
 
 			assert.Equal(t, m.Data.Team, "Red")
 			assert.Equal(t, m.Data.NewTeam, "Blue")
 
 			// 7 = changed class
 		case 7:
-			assert.Equal(t, m.Type, playerChangedClass)
+			assert.Equal(t, m.Type, PlayerChangedClass)
 
 			assert.Equal(t, m.Data.Team, "Blue")
 			assert.Equal(t, m.Data.Class, "medic")
