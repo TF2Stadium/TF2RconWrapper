@@ -96,7 +96,7 @@ func compileRegexes() {
 	rPlayerChangedClass, _ = regexp.Compile(logLineStart + `changed role to` + logLineEnd)
 	rPlayerTeamMessage, _ = regexp.Compile(logLineStart + `say_team` + logLineEnd)
 	rPlayerChangedTeam, _ = regexp.Compile(logLineStart + `joined team` + logLineEnd)
-	rGameOver, _ = regexp.Compile(logLineStart + `World triggered "Game_Over"` + logLineEnd)
+	rGameOver, _ = regexp.Compile(`^World triggered "Game_Over" reason "(.*)"`)
 
 	compiledRegexes = true
 }

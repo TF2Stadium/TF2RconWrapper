@@ -14,6 +14,7 @@ var logs []string = []string{
 	`"Sk1LL0<2><[U:1:198288660]><Red>" changed role to "sniper"`,
 	`"Sk1LL0<2><[U:1:198288660]><Red>" joined team "Blue"`,
 	`"Sk1LL0<2><[U:1:198288660]><Blue>" changed role to "medic"`,
+	`World triggered "Game_Over" reason "Reached Win Difference Limit"`,
 }
 
 func TestParse(t *testing.T) {
@@ -73,6 +74,10 @@ func TestParse(t *testing.T) {
 
 			assert.Equal(t, m.Data.Team, "Blue")
 			assert.Equal(t, m.Data.Class, "medic")
+
+			// 8 = game over
+		case 8:
+			assert.Equal(t, m.Type, WorldGameOver)
 		}
 	}
 }
