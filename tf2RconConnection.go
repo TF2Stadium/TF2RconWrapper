@@ -167,6 +167,11 @@ func (c *TF2RconConnection) RedirectLogs(ip string, port string) error {
 	return err
 }
 
+func (c *TF2RconConnection) StopLogRedirection(localip string, port string) {
+	query := fmt.Sprintf("logaddress_del %s:%s", localip, port)
+	c.Query(query)
+}
+
 // Close closes the connection
 func (c *TF2RconConnection) Close() {
 	c.rc.Close()
