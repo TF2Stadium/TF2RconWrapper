@@ -18,6 +18,7 @@ var rPlayerGlobalMessage *regexp.Regexp
 var rPlayerChangedClass *regexp.Regexp
 var rPlayerTeamMessage *regexp.Regexp
 var rPlayerChangedTeam *regexp.Regexp
+var rGameOver *regexp.Regexp
 
 var compiledRegexes bool = false
 
@@ -49,6 +50,7 @@ const (
 	PlayerTeamMessage   = iota
 	PlayerChangedClass  = iota
 	PlayerChangedTeam   = iota
+	WorldGameOver       = iota
 )
 
 type ParsedMsg struct {
@@ -94,6 +96,7 @@ func compileRegexes() {
 	rPlayerChangedClass, _ = regexp.Compile(logLineStart + `changed role to` + logLineEnd)
 	rPlayerTeamMessage, _ = regexp.Compile(logLineStart + `say_team` + logLineEnd)
 	rPlayerChangedTeam, _ = regexp.Compile(logLineStart + `joined team` + logLineEnd)
+	rGameOver, _ = regexp.Compile(`^World triggered "Game_Over" reason "(.*)"`)
 
 	compiledRegexes = true
 }
@@ -131,10 +134,13 @@ func Parse(message string) ParsedMsg {
 
 		r.Data.NewTeam = m[5]
 		r.Type = PlayerChangedTeam
+
+	case rGameOver.MatchString(message):
+		r.Type = WorldGameOver
 	}
 
 	// fields used in all matches
-	if r.Type != -1 {
+	if r.Type != -1 && r.Type != WorldGameOver {
 		r.Data.Username = m[1]
 		r.Data.SteamId = m[3]
 		r.Data.UserId = m[2]
