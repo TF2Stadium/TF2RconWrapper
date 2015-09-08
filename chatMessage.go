@@ -45,10 +45,10 @@ type PlayerData struct {
 }
 
 const (
-	playerGlobalMessage = iota
-	playerTeamMessage   = iota
-	playerChangedClass  = iota
-	playerChangedTeam   = iota
+	PlayerGlobalMessage = iota
+	PlayerTeamMessage   = iota
+	PlayerChangedClass  = iota
+	PlayerChangedTeam   = iota
 )
 
 type ParsedMsg struct {
@@ -112,25 +112,25 @@ func Parse(message string) ParsedMsg {
 		m = rPlayerGlobalMessage.FindStringSubmatch(message)
 
 		r.Data.Text = m[5]
-		r.Type = playerGlobalMessage
+		r.Type = PlayerGlobalMessage
 
 	case rPlayerTeamMessage.MatchString(message):
 		m = rPlayerTeamMessage.FindStringSubmatch(message)
 
 		r.Data.Text = m[5]
-		r.Type = playerTeamMessage
+		r.Type = PlayerTeamMessage
 
 	case rPlayerChangedClass.MatchString(message):
 		m = rPlayerChangedClass.FindStringSubmatch(message)
 
 		r.Data.Class = m[5]
-		r.Type = playerChangedClass
+		r.Type = PlayerChangedClass
 
 	case rPlayerChangedTeam.MatchString(message):
 		m = rPlayerChangedTeam.FindStringSubmatch(message)
 
 		r.Data.NewTeam = m[5]
-		r.Type = playerChangedTeam
+		r.Type = PlayerChangedTeam
 	}
 
 	// fields used in all matches
