@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"fmt"
 	"github.com/james4k/rcon"
 )
 
