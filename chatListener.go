@@ -111,10 +111,8 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 
 	r.servers[secret] = s
 
-	go func() {
-		m.Query("sv_logsecret " + secret)
-		m.RedirectLogs(r.localip, r.port)
-	}()
+	m.Query("sv_logsecret " + secret)
+	m.RedirectLogs(r.localip, r.port)
 
 	return s
 }
