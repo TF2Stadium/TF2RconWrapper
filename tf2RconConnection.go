@@ -3,9 +3,10 @@ package TF2RconWrapper
 import (
 	"errors"
 	"fmt"
-	"strconv"
+	"regexp"
 	"strings"
 
+	"fmt"
 	"github.com/james4k/rcon"
 )
 
@@ -17,6 +18,10 @@ type TF2RconConnection struct {
 
 var (
 	UnknownCommandError = errors.New("Unknown Command")
+	userIDRegex         = regexp.MustCompile(`^#\s+([0-9]+)`)
+	nameRegex           = regexp.MustCompile(`\"(.*)\"`)
+	uniqueIDRegex       = regexp.MustCompile(`\[U:\d*:\d*[:1]*\]`)
+	IPRegex             = regexp.MustCompile(`\d+\.\d+.\d+.\d+`)
 )
 
 // Query executes a query and returns the server responses
@@ -70,26 +75,38 @@ func (c *TF2RconConnection) GetPlayers() ([]Player, error) {
 	}
 	res = res[1:]
 	var list []Player
-	for _, elem := range res {
-		if elem == "" {
+	for _, line := range res {
+		if line == "" {
 			continue
 		}
-		if !strings.HasPrefix(elem, "#") {
+		if !strings.HasPrefix(line, "#") {
 			break
 		}
-		elems := strings.Fields(elem)[1:]
-		userID := elems[0]
-		name := elems[1]
-		name = name[1 : len(name)-1]
-		uniqueID := elems[2]
-		if uniqueID == "BOT" {
-			list = append(list, Player{userID, name, uniqueID, 0, "active", ""})
-		} else {
-			ping, _ := strconv.Atoi(elems[4])
-			state := elems[6]
-			ip := elems[7]
-			list = append(list, Player{userID, name, uniqueID, ping, state, ip})
+
+		var matches []string
+
+		matches = userIDRegex.FindStringSubmatch(line)
+		if matches == nil {
+			continue
 		}
+
+		userID := matches[len(matches)-1]
+		loc := nameRegex.FindStringSubmatchIndex(line)
+		if loc == nil {
+			continue
+		}
+
+		name := line[loc[0]:loc[1]]
+		matches = uniqueIDRegex.FindStringSubmatch(line[loc[1]:])
+		if matches == nil {
+			list = append(list, Player{userID, name, "BOT", ""})
+			continue
+		}
+
+		uniqueID := matches[len(matches)-1]
+		ip := IPRegex.FindString(line[loc[1]:])
+		list = append(list, Player{userID, name, uniqueID, ip})
+
 	}
 	return list, nil
 }
@@ -155,7 +172,7 @@ func (c *TF2RconConnection) ChangeMap(mapname string) error {
 
 // ChangeServerPassword changes the server password
 func (c *TF2RconConnection) ChangeServerPassword(password string) error {
-	query := "sv_password \"" + password + "\""
+	query := fmt.Sprintf("sv_password %s", password)
 	_, err := c.Query(query)
 	return err
 }
