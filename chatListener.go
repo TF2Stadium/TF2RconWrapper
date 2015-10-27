@@ -6,18 +6,20 @@ import (
 	"math/rand"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 )
 
 // RconChatListener maintains an UDP server that receives redirected chat messages from TF2 servers
 type RconChatListener struct {
-	conn    *net.UDPConn
-	servers map[string]*ServerListener
-	exit    chan bool
-	addr    *net.UDPAddr
-	localip string
-	port    string
-	rng     *rand.Rand
+	conn        *net.UDPConn
+	servers     map[string]*ServerListener
+	serversLock *sync.RWMutex
+	exit        chan bool
+	addr        *net.UDPAddr
+	localip     string
+	port        string
+	rng         *rand.Rand
 }
 
 // NewRconChatListener builds a new RconChatListener. Its arguments are localip (the ip of this server) and
@@ -33,7 +35,7 @@ func NewRconChatListener(localip, port string) (*RconChatListener, error) {
 
 	rng := rand.New(rand.NewSource(time.Now().Unix()))
 
-	listener := &RconChatListener{nil, servers, exit, addr, localip, port, rng}
+	listener := &RconChatListener{nil, servers, new(sync.RWMutex), exit, addr, localip, port, rng}
 	listener.startListening()
 	return listener, nil
 }
@@ -76,7 +78,9 @@ func (r *RconChatListener) readStrings() {
 				continue
 			}
 
+			r.serversLock.RLock()
 			s, ok := r.servers[secret]
+			r.serversLock.RUnlock()
 
 			if !ok {
 				log.Println("Received chat info from an unregistered TF2 server")
@@ -101,15 +105,19 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 
 	secret := strconv.Itoa(r.rng.Intn(999998) + 1)
 
+	r.serversLock.RLock()
 	_, ok := r.servers[secret]
 	for ok {
 		secret = strconv.Itoa(r.rng.Intn(999998) + 1)
 		_, ok = r.servers[secret]
 	}
+	r.serversLock.RUnlock()
 
 	s := &ServerListener{make(chan ChatMessage), m.host, secret, r}
 
+	r.serversLock.Lock()
 	r.servers[secret] = s
+	r.serversLock.Unlock()
 
 	m.Query("sv_logsecret " + secret)
 	m.RedirectLogs(r.localip, r.port)
