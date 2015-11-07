@@ -94,8 +94,6 @@ func (r *RconChatListener) readStrings() {
 
 // Close stops the RconChatListener
 func (r *RconChatListener) Close(m *TF2RconConnection) {
-	r.exit <- true
-	r.conn.Close()
 	m.StopLogRedirection(r.localip, r.port)
 }
 
