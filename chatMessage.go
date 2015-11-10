@@ -6,32 +6,39 @@ import (
 	"time"
 )
 
-// "Username<userId><steamId><Team>"
-// "1<2><3><4>" <- regex group
-const logLineStart = `^"(.*)<(\d+)><(\[U:1:\d+\])><(\w+)>" `
+const (
+	// "Username<userId><steamId><Team>"
+	// "1<2><3><4>" <- regex group
+	logLineStart = `^"(.*)<(\d+)><(\[U:1:\d+\])><(\w+)>" `
+	// "5" <- regex group
+	logLineEnd = ` "(.*)"`
 
-// "5" <- regex group
-const logLineEnd = ` "(.*)"`
+	logLineStartSpec = `^"(.*)<(\d+)><(\[U:1:\d+\])><(\w*)>" `
+)
 
 // regexes used in the parser
-var rPlayerGlobalMessage *regexp.Regexp
-var rPlayerChangedClass *regexp.Regexp
-var rPlayerTeamMessage *regexp.Regexp
-var rPlayerChangedTeam *regexp.Regexp
-var rGameOver *regexp.Regexp
+var (
+	rPlayerGlobalMessage = regexp.MustCompile(logLineStart + `say` + logLineEnd)
+	rPlayerChangedClass  = regexp.MustCompile(logLineStart + `changed role to` + logLineEnd)
+	rPlayerTeamMessage   = regexp.MustCompile(logLineStart + `say_team` + logLineEnd)
+	rPlayerChangedTeam   = regexp.MustCompile(logLineStart + `joined team` + logLineEnd)
 
-var compiledRegexes bool = false
+	//Global Messages
+	rPlayerConnected    = regexp.MustCompile(logLineStartSpec + `connected, address "\d+.\d+.\d+.\d+\:\d+"`)
+	rPlayerDisconnected = regexp.MustCompile(logLineStartSpec + `disconnected \(reason "(.*)"\)`)
+	rGameOver           = regexp.MustCompile(`^World triggered "Game_Over" reason "(.*)"`)
+)
 
-// ChatMessage represents a chat message in a TF2 server, and contains a timestamp and a message.
-// The message can be a player message that contains the sender's username, steamid and other info
-// or a server message.
-type ChatMessage struct {
+//LogMessage represents a log message in a TF2 server, and contains a timestamp
+//and a message. The message can be a player message that contains the sender's
+//username, steamid and other info or a server message.
+type LogMessage struct {
 	Timestamp time.Time
 	Message   string
 	Parsed    ParsedMsg
 }
 
-// when a player say something in global chat
+//When a player says something in the global chat, or when they join the game
 type PlayerData struct {
 	Username string
 
@@ -50,7 +57,10 @@ const (
 	PlayerTeamMessage   = iota
 	PlayerChangedClass  = iota
 	PlayerChangedTeam   = iota
-	WorldGameOver       = iota
+
+	WorldPlayerConnected    = iota
+	WorldPlayerDisconnected = iota
+	WorldGameOver           = iota
 )
 
 type ParsedMsg struct {
@@ -58,11 +68,11 @@ type ParsedMsg struct {
 	Data PlayerData
 }
 
-func proccessMessage(textBytes []byte) (ChatMessage, string, error) {
+func proccessMessage(textBytes []byte) (LogMessage, string, error) {
 	packetType := textBytes[4]
 
 	if packetType != 0x53 {
-		return ChatMessage{}, "", errors.New("Server trying to send a chat packet without a secret")
+		return LogMessage{}, "", errors.New("Server trying to send a chat packet without a secret")
 	}
 
 	// drop the header
@@ -88,27 +98,12 @@ func proccessMessage(textBytes []byte) (ChatMessage, string, error) {
 
 	m := Parse(message)
 
-	return ChatMessage{timeObj, message, m}, secret, nil
-}
-
-func compileRegexes() {
-	rPlayerGlobalMessage, _ = regexp.Compile(logLineStart + `say` + logLineEnd)
-	rPlayerChangedClass, _ = regexp.Compile(logLineStart + `changed role to` + logLineEnd)
-	rPlayerTeamMessage, _ = regexp.Compile(logLineStart + `say_team` + logLineEnd)
-	rPlayerChangedTeam, _ = regexp.Compile(logLineStart + `joined team` + logLineEnd)
-	rGameOver, _ = regexp.Compile(`^World triggered "Game_Over" reason "(.*)"`)
-
-	compiledRegexes = true
+	return LogMessage{timeObj, message, m}, secret, nil
 }
 
 func Parse(message string) ParsedMsg {
 	r := ParsedMsg{Type: -1}
 	var m []string
-
-	// we don't need to compile them everytime...
-	if !compiledRegexes {
-		compileRegexes()
-	}
 
 	switch {
 	case rPlayerGlobalMessage.MatchString(message):
@@ -137,6 +132,16 @@ func Parse(message string) ParsedMsg {
 
 	case rGameOver.MatchString(message):
 		r.Type = WorldGameOver
+
+	case rPlayerConnected.MatchString(message):
+		m = rPlayerConnected.FindStringSubmatch(message)
+
+		r.Type = WorldPlayerConnected
+
+	case rPlayerDisconnected.MatchString(message):
+		m = rPlayerDisconnected.FindStringSubmatch(message)
+
+		r.Type = WorldPlayerDisconnected
 	}
 
 	// fields used in all matches
@@ -144,7 +149,9 @@ func Parse(message string) ParsedMsg {
 		r.Data.Username = m[1]
 		r.Data.SteamId = m[3]
 		r.Data.UserId = m[2]
-		r.Data.Team = m[4]
+		if r.Type != WorldPlayerDisconnected {
+			r.Data.Team = m[4]
+		}
 	}
 
 	return r

@@ -111,7 +111,7 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 	}
 	r.serversLock.RUnlock()
 
-	s := &ServerListener{make(chan ChatMessage), m.host, secret, r}
+	s := &ServerListener{make(chan LogMessage), m.host, secret, r}
 
 	r.serversLock.Lock()
 	r.servers[secret] = s
@@ -126,7 +126,7 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 // ServerListener represents a listener that receives chat messages from a particular
 // TF2 server. It's built and managed by an RconChatListener instance.
 type ServerListener struct {
-	Messages chan ChatMessage
+	Messages chan LogMessage
 	host     string
 	secret   string
 	listener *RconChatListener

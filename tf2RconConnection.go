@@ -112,10 +112,12 @@ func (c *TF2RconConnection) GetPlayers() ([]Player, error) {
 
 // KickPlayer kicks a player
 func (c *TF2RconConnection) KickPlayer(p Player, message string) error {
-	query := "kickid " + p.UserID
-	if message != "" {
-		query += " \"" + message + "\""
-	}
+	return c.KickPlayerID(p.UserID, message)
+}
+
+// Kicks a player with the given player ID
+func (c *TF2RconConnection) KickPlayerID(userID string, message string) error {
+	query := fmt.Sprintf("kickid %s %s", userID, message)
 	_, err := c.Query(query)
 	return err
 }
