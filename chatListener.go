@@ -83,7 +83,7 @@ func (r *RconChatListener) readStrings() {
 			r.serversLock.RUnlock()
 
 			if !ok {
-				log.Println("Received chat info from an unregistered TF2 server")
+				//log.Println("Received chat info from an unregistered TF2 server")
 				continue
 			}
 
