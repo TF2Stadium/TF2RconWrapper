@@ -166,7 +166,7 @@ func (c *TF2RconConnection) ChangeMap(mapname string) error {
 	query := "changelevel \"" + mapname + "\""
 	res, err := c.Query(query)
 	if res != "" {
-		return errors.New(res)
+		return errors.New("Map not found.")
 	}
 	return err
 }
