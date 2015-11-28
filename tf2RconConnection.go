@@ -77,9 +77,12 @@ func (c *TF2RconConnection) GetConVar(cvar string) (string, error) {
 	//  - short description of cvar
 
 	firstLine := strings.Split(raw, "\n")[0]
-	value := CVarValueRegex.FindStringSubmatch(firstLine)[1]
+	matches := CVarValueRegex.FindStringSubmatch(firstLine)
+	if len(matches) != 2 {
+		return "", errors.New("Unknown cvar.")
+	}
 
-	return value, nil
+	return matches[1], nil
 }
 
 func (c *TF2RconConnection) SetConVar(cvar string, val string) (string, error) {
