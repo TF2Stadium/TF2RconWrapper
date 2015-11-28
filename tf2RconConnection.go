@@ -202,9 +202,8 @@ func (c *TF2RconConnection) ChangeServerPassword(password string) error {
 }
 
 // GetServerPassword returns the server password
-func (c *TF2RconConnection) GetServerPassword() error {
-	_, err := c.GetConVar("sv_password")
-	return err
+func (c *TF2RconConnection) GetServerPassword() (string, error) {
+	return c.GetConVar("sv_password")
 }
 
 // RedirectLogs send the logaddress_add command
