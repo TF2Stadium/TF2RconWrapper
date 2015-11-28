@@ -21,6 +21,7 @@ var (
 	nameRegex           = regexp.MustCompile(`\"(.*)\"`)
 	uniqueIDRegex       = regexp.MustCompile(`\[U:\d*:\d*[:1]*\]`)
 	IPRegex             = regexp.MustCompile(`\d+\.\d+.\d+.\d+`)
+	CVarValueRegex      = regexp.MustCompile(`^\"(?:.*?)\" \= \"(.*?)\"`)
 )
 
 // Query executes a query and returns the server responses
@@ -59,6 +60,30 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 	}
 
 	return resp, nil
+}
+
+func (c *TF2RconConnection) GetConVar(cvar string) (string, error) {
+	raw, err := c.Query(cvar)
+
+	if err != nil {
+		return "", err
+	}
+
+	// Querying just a variable's name sends back a message like the
+	// following:
+	//
+	// "cvar_name" = "current value" ( def. "default value" )
+	//  var flags like notify replicated
+	//  - short description of cvar
+
+	firstLine := strings.Split(raw, "\n")[0]
+	value := CVarValueRegex.FindStringSubmatch(firstLine)[1]
+
+	return value, nil
+}
+
+func (c *TF2RconConnection) SetConVar(cvar string, val string) (string, error) {
+	return c.Query(fmt.Sprintf("%s \"%s\"", cvar, val))
 }
 
 // GetPlayers returns a list of players in the server. Includes bots.
@@ -149,8 +174,7 @@ func (c *TF2RconConnection) Say(message string) error {
 // ChangeRconPassword changes the rcon password and updates the current connection
 // to use the new password
 func (c *TF2RconConnection) ChangeRconPassword(password string) error {
-	query := "rcon_password \"" + password + "\""
-	_, err := c.Query(query)
+	_, err := c.SetConVar("rcon_password", password)
 
 	if err == nil {
 		c.rc.Close()
@@ -173,9 +197,13 @@ func (c *TF2RconConnection) ChangeMap(mapname string) error {
 
 // ChangeServerPassword changes the server password
 func (c *TF2RconConnection) ChangeServerPassword(password string) error {
-	query := fmt.Sprintf("sv_password %s", password)
-	_, err := c.Query(query)
+	_, err := c.SetConVar("sv_password", password)
 	return err
+}
+
+// GetServerPassword returns the server password
+func (c *TF2RconConnection) GetServerPassword() (string, error) {
+	return c.GetConVar("sv_password")
 }
 
 // RedirectLogs send the logaddress_add command
