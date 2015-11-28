@@ -18,10 +18,10 @@ type TF2RconConnection struct {
 var (
 	UnknownCommandError = errors.New("Unknown Command")
 	userIDRegex         = regexp.MustCompile(`^#\s+([0-9]+)`)
-	nameRegex           = regexp.MustCompile(`\"(.*)\"`)
+	nameRegex           = regexp.MustCompile(`"(.*)"`)
 	uniqueIDRegex       = regexp.MustCompile(`\[U:\d*:\d*[:1]*\]`)
 	IPRegex             = regexp.MustCompile(`\d+\.\d+.\d+.\d+`)
-	CVarValueRegex      = regexp.MustCompile(`^\"(?:.*?)\" \= \"(.*?)\"`)
+	CVarValueRegex      = regexp.MustCompile(`^"(?:.*?)" = "(.*?)"`)
 )
 
 // Query executes a query and returns the server responses
@@ -77,9 +77,12 @@ func (c *TF2RconConnection) GetConVar(cvar string) (string, error) {
 	//  - short description of cvar
 
 	firstLine := strings.Split(raw, "\n")[0]
-	value := CVarValueRegex.FindStringSubmatch(firstLine)[1]
+	matches := CVarValueRegex.FindStringSubmatch(firstLine)
+	if len(matches) != 2 {
+		return "", errors.New("Unknown cvar.")
+	}
 
-	return value, nil
+	return matches[1], nil
 }
 
 func (c *TF2RconConnection) SetConVar(cvar string, val string) (string, error) {
