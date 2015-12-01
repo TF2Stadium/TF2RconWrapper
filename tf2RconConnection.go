@@ -16,12 +16,12 @@ type TF2RconConnection struct {
 }
 
 var (
-	UnknownCommandError = errors.New("Unknown Command")
-	userIDRegex         = regexp.MustCompile(`^#\s+([0-9]+)`)
-	nameRegex           = regexp.MustCompile(`"(.*)"`)
-	uniqueIDRegex       = regexp.MustCompile(`\[U:\d*:\d*[:1]*\]`)
-	IPRegex             = regexp.MustCompile(`\d+\.\d+.\d+.\d+`)
-	CVarValueRegex      = regexp.MustCompile(`^"(?:.*?)" = "(.*?)"`)
+	ErrUnknownCommand = errors.New("Unknown Command")
+	userIDRegex       = regexp.MustCompile(`^#\s+([0-9]+)`)
+	nameRegex         = regexp.MustCompile(`"(.*)"`)
+	uniqueIDRegex     = regexp.MustCompile(`\[U:\d*:\d*[:1]*\]`)
+	IPRegex           = regexp.MustCompile(`\d+\.\d+.\d+.\d+`)
+	CVarValueRegex    = regexp.MustCompile(`^"(?:.*?)" = "(.*?)"`)
 )
 
 // Query executes a query and returns the server responses
@@ -56,7 +56,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 	}
 
 	if strings.HasPrefix(resp, "Unknown command") {
-		return "", UnknownCommandError
+		return resp, ErrUnknownCommand
 	}
 
 	return resp, nil
