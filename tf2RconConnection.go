@@ -13,6 +13,8 @@ import (
 type TF2RconConnection struct {
 	rc   *rcon.RemoteConsole
 	host string
+
+	secret string
 }
 
 var (
@@ -246,5 +248,5 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &TF2RconConnection{rc, address}, nil
+	return &TF2RconConnection{rc, address, ""}, nil
 }

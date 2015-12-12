@@ -94,6 +94,10 @@ func (r *RconChatListener) readStrings() {
 
 // Close stops the RconChatListener
 func (r *RconChatListener) Close(m *TF2RconConnection) {
+	r.serversLock.Lock()
+	delete(r.servers, m.secret)
+	r.serversLock.Unlock()
+
 	m.StopLogRedirection(r.localip, r.port)
 }
 
@@ -109,6 +113,7 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 		secret = strconv.Itoa(r.rng.Intn(999998) + 1)
 		_, ok = r.servers[secret]
 	}
+	m.secret = secret
 	r.serversLock.RUnlock()
 
 	s := &ServerListener{make(chan LogMessage), m.host, secret, r}
