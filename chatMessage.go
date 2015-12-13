@@ -68,11 +68,47 @@ type ParsedMsg struct {
 	Data PlayerData
 }
 
-func proccessMessage(textBytes []byte) (LogMessage, string, error) {
+var (
+	ErrInvalidPacket = errors.New("Invalid Packet")
+)
+
+func getSecret(data []byte) (string, error) {
+	if !(len(data) > 6) {
+		return "", ErrInvalidPacket
+	}
+
+	if data[4] != 0x53 {
+		return "", errors.New("Server trying to send a chat packet without a secret")
+	}
+
+	bytes := data[5:]
+	var pos int
+
+	for bytes[pos] != 0x20 {
+		pos++
+		if pos >= len(bytes) {
+			return "", ErrInvalidPacket
+		}
+	}
+
+	secret := string(bytes[:pos-1])
+	if pos+1 >= len(data) {
+		//No message/time data
+		return "", ErrInvalidPacket
+	}
+
+	return secret, nil
+}
+
+func proccessMessage(textBytes []byte) (LogMessage, error) {
+	if len(textBytes) <= 24 {
+		return LogMessage{}, ErrInvalidPacket
+	}
+
 	packetType := textBytes[4]
 
 	if packetType != 0x53 {
-		return LogMessage{}, "", errors.New("Server trying to send a chat packet without a secret")
+		return LogMessage{}, errors.New("Server trying to send a chat packet without a secret")
 	}
 
 	// drop the header
@@ -82,8 +118,6 @@ func proccessMessage(textBytes []byte) (LogMessage, string, error) {
 	for textBytes[pos] != 0x20 {
 		pos++
 	}
-
-	secret := string(textBytes[:pos-1])
 
 	textBytes = textBytes[pos+1:]
 
@@ -98,7 +132,7 @@ func proccessMessage(textBytes []byte) (LogMessage, string, error) {
 
 	m := Parse(message)
 
-	return LogMessage{timeObj, message, m}, secret, nil
+	return LogMessage{timeObj, message, m}, nil
 }
 
 func Parse(message string) ParsedMsg {
