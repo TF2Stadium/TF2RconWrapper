@@ -55,15 +55,11 @@ func (r *RconChatListener) readStrings() {
 	buff := make([]byte, 4096)
 
 	for {
-		select {
-		case <-r.exit:
-			return
-		default:
-			r.conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
-			n, _, err := r.conn.ReadFromUDP(buff)
+		n, _, err := r.conn.ReadFromUDP(buff)
+		go func() {
 			if err != nil {
 				if typedErr, ok := err.(*net.OpError); ok && typedErr.Timeout() {
-					continue
+					return
 				}
 
 				fmt.Println("Error receiving server chat data: ", err)
@@ -71,24 +67,24 @@ func (r *RconChatListener) readStrings() {
 
 			message := buff[0:n]
 
-			messageObj, secret, err := proccessMessage(message)
-
-			if err != nil {
-				log.Println(err)
-				continue
-			}
+			secret, err := getSecret(message)
 
 			r.serversLock.RLock()
 			s, ok := r.servers[secret]
 			r.serversLock.RUnlock()
-
 			if !ok {
-				//log.Println("Received chat info from an unregistered TF2 server")
-				continue
+				return
+			}
+
+			messageObj, err := proccessMessage(message)
+
+			if err != nil {
+				log.Println(err)
+				return
 			}
 
 			s.Messages <- messageObj
-		}
+		}()
 	}
 }
 
@@ -124,7 +120,6 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 
 	m.Query("sv_logsecret " + secret)
 	m.RedirectLogs(r.localip, r.port)
-
 	return s
 }
 
