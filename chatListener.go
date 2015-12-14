@@ -10,9 +10,13 @@ import (
 	"time"
 )
 
-type rawMessage struct {
+type RawMessage struct {
 	data []byte
 	n    int //length
+}
+
+func (r RawMessage) String() string {
+	return string(r.data)
 }
 
 // RconChatListener maintains an UDP server that receives redirected chat messages from TF2 servers
@@ -24,14 +28,12 @@ type RconChatListener struct {
 	localip     string
 	port        string
 	rng         *rand.Rand
-
-	rawMessage chan rawMessage
 }
 
 // NewRconChatListener builds a new RconChatListener. Its arguments are localip (the ip of this server) and
 // port (the port the listener will use)
 func NewRconChatListener(localip, port string) (*RconChatListener, error) {
-	addr, err := net.ResolveUDPAddr("udp", ":"+port)
+	addr, err := net.ResolveUDPAddr("udp4", ":"+port)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +42,7 @@ func NewRconChatListener(localip, port string) (*RconChatListener, error) {
 
 	rng := rand.New(rand.NewSource(time.Now().Unix()))
 
-	listener := &RconChatListener{nil, servers, new(sync.RWMutex), addr, localip, port, rng, make(chan rawMessage)}
+	listener := &RconChatListener{nil, servers, new(sync.RWMutex), addr, localip, port, rng}
 	listener.startListening()
 	return listener, nil
 }
@@ -49,65 +51,55 @@ func (r *RconChatListener) startListening() {
 	conn, err := net.ListenUDP("udp", r.addr)
 	r.conn = conn
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 		return
 	}
 	conn.SetReadBuffer(1048576)
-	go r.processStrings()
 	go r.readStrings()
 }
 
-func (r *RconChatListener) processStrings() {
-	for {
-		select {
-		case raw := <-r.rawMessage:
-			message := raw.data[0:raw.n]
+func (r *RconChatListener) readStrings() {
+	rawMessageC := make(chan RawMessage, 500)
 
+	go func() {
+		for {
+			raw := <-rawMessageC
+			message := raw.data[0:raw.n]
 			secret, err := getSecret(message)
+			if err != nil {
+				continue
+			}
 
 			r.serversLock.RLock()
 			s, ok := r.servers[secret]
 			r.serversLock.RUnlock()
-			if !ok {
-				continue
+			if ok {
+				s.RawMessages <- raw
 			}
-
-			messageObj, err := proccessMessage(message)
-
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-
-			s.Messages <- messageObj
 		}
-	}
-}
-
-func (r *RconChatListener) readStrings() {
-	buff := make([]byte, 65000)
+	}()
 
 	for {
-		n, _, err := r.conn.ReadFromUDP(buff)
+		buff := make([]byte, 65000)
+		n, err := r.conn.Read(buff)
+		//log.Println(string(buff[0:n]))
+
 		if err != nil {
 			fmt.Println("Error receiving server chat data: ", err)
 			continue
 		}
 
-		r.rawMessage <- rawMessage{buff, n}
+		rawMessageC <- RawMessage{buff, n}
 	}
 }
 
 // Close stops the RconChatListener
-func (r *RconChatListener) Close(m *TF2RconConnection, listener *ServerListener) {
-	m.StopLogRedirection(r.localip, r.port)
+func (s *ServerListener) Close(m *TF2RconConnection) {
+	s.listener.serversLock.Lock()
+	delete(s.listener.servers, s.secret)
+	s.listener.serversLock.Unlock()
 
-	r.serversLock.Lock()
-	s := r.servers[listener.secret]
-	<-s.Messages
-	close(s.Messages)
-	delete(r.servers, listener.secret)
-	r.serversLock.Unlock()
+	m.StopLogRedirection(s.listener.localip, s.listener.port)
 }
 
 // CreateServerListener creates a ServerListener that receives chat messages from a
@@ -124,10 +116,11 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 	}
 	r.serversLock.RUnlock()
 
-	s := &ServerListener{make(chan LogMessage), m.host, secret, r}
+	s := &ServerListener{make(chan RawMessage), m.host, secret, r}
 
 	r.serversLock.Lock()
 	r.servers[secret] = s
+	//log.Println(r.servers)
 	r.serversLock.Unlock()
 
 	m.Query("sv_logsecret " + secret)
@@ -138,7 +131,8 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 // ServerListener represents a listener that receives chat messages from a particular
 // TF2 server. It's built and managed by an RconChatListener instance.
 type ServerListener struct {
-	Messages chan LogMessage
+	RawMessages chan RawMessage
+
 	host     string
 	secret   string
 	listener *RconChatListener

@@ -100,7 +100,8 @@ func getSecret(data []byte) (string, error) {
 	return secret, nil
 }
 
-func proccessMessage(textBytes []byte) (LogMessage, error) {
+func ParseMessage(raw RawMessage) (LogMessage, error) {
+	textBytes := raw.data[0:raw.n]
 	if len(textBytes) <= 24 {
 		return LogMessage{}, ErrInvalidPacket
 	}
@@ -130,12 +131,12 @@ func proccessMessage(textBytes []byte) (LogMessage, error) {
 
 	timeObj, _ := time.Parse(refTime, timeText)
 
-	m := Parse(message)
+	m := parse(message)
 
 	return LogMessage{timeObj, message, m}, nil
 }
 
-func Parse(message string) ParsedMsg {
+func parse(message string) ParsedMsg {
 	r := ParsedMsg{Type: -1}
 	var m []string
 
