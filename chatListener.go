@@ -24,6 +24,7 @@ type RconChatListener struct {
 	conn        *net.UDPConn
 	servers     map[string]*ServerListener
 	serversLock *sync.RWMutex
+	wait        *sync.WaitGroup
 	addr        *net.UDPAddr
 	localip     string
 	port        string
@@ -42,7 +43,7 @@ func NewRconChatListener(localip, port string) (*RconChatListener, error) {
 
 	rng := rand.New(rand.NewSource(time.Now().Unix()))
 
-	listener := &RconChatListener{nil, servers, new(sync.RWMutex), addr, localip, port, rng}
+	listener := &RconChatListener{nil, servers, new(sync.RWMutex), new(sync.WaitGroup), addr, localip, port, rng}
 	listener.startListening()
 	return listener, nil
 }
@@ -64,6 +65,7 @@ func (r *RconChatListener) readStrings() {
 	go func() {
 		for {
 			raw := <-rawMessageC
+			r.wait.Wait()
 			message := raw.data[0:raw.n]
 			secret, err := getSecret(message)
 			if err != nil {
@@ -95,9 +97,9 @@ func (r *RconChatListener) readStrings() {
 
 // Close stops the RconChatListener
 func (s *ServerListener) Close(m *TF2RconConnection) {
-	s.listener.serversLock.Lock()
+	s.listener.wait.Add(1)
 	delete(s.listener.servers, s.secret)
-	s.listener.serversLock.Unlock()
+	s.listener.wait.Done()
 
 	m.StopLogRedirection(s.listener.localip, s.listener.port)
 }
@@ -116,7 +118,7 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 	}
 	r.serversLock.RUnlock()
 
-	s := &ServerListener{make(chan RawMessage), m.host, secret, r}
+	s := &ServerListener{make(chan RawMessage, 10), m.host, secret, r}
 
 	r.serversLock.Lock()
 	r.servers[secret] = s
