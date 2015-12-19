@@ -19,7 +19,7 @@ var logs []string = []string{
 
 func TestParse(t *testing.T) {
 	for i := range logs {
-		m := Parse(logs[i])
+		m := parse(logs[i])
 
 		switch i {
 
