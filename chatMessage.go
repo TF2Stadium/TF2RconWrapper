@@ -27,6 +27,7 @@ var (
 	rPlayerConnected    = regexp.MustCompile(logLineStartSpec + `connected, address "\d+.\d+.\d+.\d+\:\d+"`)
 	rPlayerDisconnected = regexp.MustCompile(logLineStartSpec + `disconnected \(reason "(.*)"\)`)
 	rGameOver           = regexp.MustCompile(`^World triggered "Game_Over" reason "(.*)"`)
+	rServerCvar         = regexp.MustCompile(`^server_cvar: "(.*)" "(.*)"`)
 )
 
 //LogMessage represents a log message in a TF2 server, and contains a timestamp
@@ -52,6 +53,11 @@ type PlayerData struct {
 	Class string
 }
 
+type CvarData struct {
+	Variable string
+	Value    string
+}
+
 const (
 	PlayerGlobalMessage = iota
 	PlayerTeamMessage   = iota
@@ -61,11 +67,12 @@ const (
 	WorldPlayerConnected    = iota
 	WorldPlayerDisconnected = iota
 	WorldGameOver           = iota
+	ServerCvar              = iota
 )
 
 type ParsedMsg struct {
 	Type int
-	Data PlayerData
+	Data interface{}
 }
 
 var (
@@ -140,53 +147,70 @@ func parse(message string) ParsedMsg {
 	r := ParsedMsg{Type: -1}
 	var m []string
 
+	isPlayerMessage := false
+	playerData := PlayerData{}
+
 	switch {
 	case rPlayerGlobalMessage.MatchString(message):
 		m = rPlayerGlobalMessage.FindStringSubmatch(message)
 
-		r.Data.Text = m[5]
+		isPlayerMessage = true
+		playerData.Text = m[5]
 		r.Type = PlayerGlobalMessage
 
 	case rPlayerTeamMessage.MatchString(message):
 		m = rPlayerTeamMessage.FindStringSubmatch(message)
 
-		r.Data.Text = m[5]
+		isPlayerMessage = true
+		playerData.Text = m[5]
 		r.Type = PlayerTeamMessage
 
 	case rPlayerChangedClass.MatchString(message):
 		m = rPlayerChangedClass.FindStringSubmatch(message)
 
-		r.Data.Class = m[5]
+		isPlayerMessage = true
+		playerData.Class = m[5]
 		r.Type = PlayerChangedClass
 
 	case rPlayerChangedTeam.MatchString(message):
 		m = rPlayerChangedTeam.FindStringSubmatch(message)
 
-		r.Data.NewTeam = m[5]
+		isPlayerMessage = true
+		playerData.NewTeam = m[5]
 		r.Type = PlayerChangedTeam
-
-	case rGameOver.MatchString(message):
-		r.Type = WorldGameOver
 
 	case rPlayerConnected.MatchString(message):
 		m = rPlayerConnected.FindStringSubmatch(message)
 
+		isPlayerMessage = true
 		r.Type = WorldPlayerConnected
 
 	case rPlayerDisconnected.MatchString(message):
 		m = rPlayerDisconnected.FindStringSubmatch(message)
 
+		isPlayerMessage = true
 		r.Type = WorldPlayerDisconnected
+
+	// Non-Player Messages
+	case rGameOver.MatchString(message):
+		r.Type = WorldGameOver
+
+	case rServerCvar.MatchString(message):
+		m = rServerCvar.FindStringSubmatch(message)
+
+		r.Type = ServerCvar
+		r.Data = CvarData{Variable: m[1], Value: m[2]}
 	}
 
 	// fields used in all matches
-	if r.Type != -1 && r.Type != WorldGameOver {
-		r.Data.Username = m[1]
-		r.Data.SteamId = m[3]
-		r.Data.UserId = m[2]
+	if isPlayerMessage {
+		playerData.Username = m[1]
+		playerData.SteamId = m[3]
+		playerData.UserId = m[2]
 		if r.Type != WorldPlayerDisconnected {
-			r.Data.Team = m[4]
+			playerData.Team = m[4]
 		}
+		r.Data = playerData
 	}
 
 	return r
