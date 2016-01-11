@@ -174,6 +174,11 @@ func (c *TF2RconConnection) Say(message string) error {
 	return err
 }
 
+func (c *TF2RconConnection) Sayf(format string, a ...interface{}) error {
+	err := c.Say(fmt.Sprintf(format, a...))
+	return err
+}
+
 // ChangeRconPassword changes the rcon password and updates the current connection
 // to use the new password
 func (c *TF2RconConnection) ChangeRconPassword(password string) error {
