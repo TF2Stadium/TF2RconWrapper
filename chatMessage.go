@@ -140,7 +140,7 @@ func ParseMessage(raw RawMessage) (LogMessage, error) {
 
 	m := parse(message)
 
-	return LogMessage{timeObj, message, m}, nil
+	return LogMessage{timeObj, text, m}, nil
 }
 
 func parse(message string) ParsedMsg {
