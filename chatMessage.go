@@ -28,6 +28,8 @@ var (
 	rPlayerDisconnected = regexp.MustCompile(logLineStartSpec + `disconnected \(reason "(.*)"\)`)
 	rGameOver           = regexp.MustCompile(`^World triggered "Game_Over" reason "(.*)"`)
 	rServerCvar         = regexp.MustCompile(`^server_cvar: "(.*)" "(.*)"`)
+
+	rLogFiledClosed = regexp.MustCompile("^Log file closed.")
 )
 
 //LogMessage represents a log message in a TF2 server, and contains a timestamp
@@ -68,6 +70,8 @@ const (
 	WorldPlayerDisconnected = iota
 	WorldGameOver           = iota
 	ServerCvar              = iota
+
+	LogFileClosed = iota
 )
 
 type ParsedMsg struct {
@@ -200,6 +204,9 @@ func parse(message string) ParsedMsg {
 
 		r.Type = ServerCvar
 		r.Data = CvarData{Variable: m[1], Value: m[2]}
+
+	case rLogFiledClosed.MatchString(message):
+		r.Type = LogFileClosed
 	}
 
 	// fields used in all matches
