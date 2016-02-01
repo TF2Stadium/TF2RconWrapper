@@ -118,6 +118,10 @@ func (r *RconChatListener) CreateServerListener(m *TF2RconConnection) *ServerLis
 	}
 	r.serversLock.RUnlock()
 
+	return r.CreateListenerWithSecret(m, secret)
+}
+
+func (r *RconChatListener) CreateListenerWithSecret(m *TF2RconConnection, secret string) *ServerListener {
 	s := &ServerListener{make(chan RawMessage, 10), m.host, secret, r}
 
 	r.serversLock.Lock()
