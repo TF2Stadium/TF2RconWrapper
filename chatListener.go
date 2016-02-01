@@ -98,7 +98,7 @@ func (r *RconChatListener) readStrings() {
 // Close stops the RconChatListener
 func (s *ServerListener) Close(m *TF2RconConnection) {
 	s.listener.wait.Add(1)
-	delete(s.listener.servers, s.secret)
+	delete(s.listener.servers, s.Secret)
 	s.listener.wait.Done()
 
 	m.StopLogRedirection(s.listener.localip, s.listener.port)
@@ -140,6 +140,6 @@ type ServerListener struct {
 	RawMessages chan RawMessage
 
 	host     string
-	secret   string
+	Secret   string
 	listener *RconChatListener
 }
