@@ -96,12 +96,17 @@ func (c *TF2RconConnection) GetPlayers() ([]Player, error) {
 		return nil, err
 	}
 
+	var list []Player
 	res := strings.Split(playerString, "\n")
+	if len(res) == 0 {
+		return list, errors.New("GetPlayers: empty status output")
+	}
+
 	for !strings.HasPrefix(res[0], "#") {
 		res = res[1:]
 	}
 	res = res[1:]
-	var list []Player
+
 	for _, line := range res {
 		if line == "" {
 			continue
