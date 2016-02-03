@@ -219,6 +219,48 @@ func (c *TF2RconConnection) GetServerPassword() (string, error) {
 	return c.GetConVar("sv_password")
 }
 
+func (c *TF2RconConnection) AddTag(newTag string) error {
+	tags, err := c.GetConVar("sv_tags")
+	if err != nil {
+		return err
+	}
+
+	// Source servers don't auto-remove duplicate tags, and noone
+	tagExists := false
+	for _, tag := range strings.Split(tags, ",") {
+		if tag == newTag {
+			tagExists = true
+			break
+		}
+	}
+
+	if !tagExists {
+		newTags := strings.Join([]string{tags, newTag}, ",")
+		_, err := c.SetConVar("sv_tags", newTags)
+		return err
+	}
+
+	return nil
+}
+
+func (c *TF2RconConnection) RemoveTag(tagName string) error {
+	tags, err := c.GetConVar("sv_tags")
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(tags, tagName) {
+		// Replace all instances of the given tagName. This may leave
+		// duplicated or trailing commas in the sv_tags string; however
+		// Source servers clean up the value of sv_tags to remove those
+		// anyways
+		_, err := c.SetConVar("sv_tags", strings.Replace(tags, tagName, "", -1))
+		return err
+	}
+
+	return nil
+}
+
 // RedirectLogs send the logaddress_add command
 func (c *TF2RconConnection) RedirectLogs(ip string, port string) error {
 	query := "logaddress_add " + ip + ":" + port
