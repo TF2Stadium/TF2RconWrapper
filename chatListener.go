@@ -95,6 +95,11 @@ func (r *RconChatListener) readStrings() {
 	}
 }
 
+func (r *RconChatListener) SetRedirectAddress(addr, port string) {
+	r.localip = addr
+	r.port = port
+}
+
 // Close stops the RconChatListener
 func (s *ServerListener) Close(m *TF2RconConnection) {
 	s.listener.wait.Add(1)
