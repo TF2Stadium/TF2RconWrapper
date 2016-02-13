@@ -174,7 +174,7 @@ func (l *Listener) AddSource(handler Handler, m *TF2RconConnection) *Source {
 	for ok {
 		_, ok = l.sources[secret]
 	}
-	l.mapMu.Unlock()
+	l.mapMu.RUnlock()
 
 	return l.AddSourceSecret(secret, handler, m)
 }
