@@ -62,14 +62,14 @@ type CvarData struct {
 
 const (
 	PlayerGlobalMessage = iota
-	PlayerTeamMessage   = iota
-	PlayerChangedClass  = iota
-	PlayerChangedTeam   = iota
+	PlayerTeamMessage
+	PlayerChangedClass
+	PlayerChangedTeam
 
-	WorldPlayerConnected    = iota
-	WorldPlayerDisconnected = iota
-	WorldGameOver           = iota
-	ServerCvar              = iota
+	WorldPlayerConnected
+	WorldPlayerDisconnected
+	WorldGameOver
+	ServerCvar
 
 	LogFileClosed = iota
 )
@@ -83,13 +83,13 @@ var (
 	ErrInvalidPacket = errors.New("Invalid Packet")
 )
 
-func getSecret(data []byte) (string, error) {
+func getSecret(data []byte) (string, int, error) {
 	if !(len(data) > 6) {
-		return "", ErrInvalidPacket
+		return "", 0, ErrInvalidPacket
 	}
 
 	if data[4] != 0x53 {
-		return "", errors.New("Server trying to send a chat packet without a secret")
+		return "", 0, errors.New("Server trying to send a chat packet without a secret")
 	}
 
 	bytes := data[5:]
@@ -98,56 +98,31 @@ func getSecret(data []byte) (string, error) {
 	for bytes[pos] != 0x20 {
 		pos++
 		if pos >= len(bytes) {
-			return "", ErrInvalidPacket
+			return "", 0, ErrInvalidPacket
 		}
 	}
 
 	secret := string(bytes[:pos-1])
 	if pos+1 >= len(data) {
 		//No message/time data
-		return "", ErrInvalidPacket
+		return "", 0, ErrInvalidPacket
 	}
 
-	return secret, nil
+	return secret, pos + 1, nil
 }
 
-func ParseMessage(raw RawMessage) (LogMessage, error) {
-	textBytes := raw.data[0:raw.n]
-	if len(textBytes) <= 24 {
-		return LogMessage{}, ErrInvalidPacket
-	}
+const refTime = "01/02/2006 -  15:04:05"
 
-	packetType := textBytes[4]
-
-	if packetType != 0x53 {
-		return LogMessage{}, errors.New("Server trying to send a chat packet without a secret")
-	}
-
-	// drop the header
-	textBytes = textBytes[5:]
-
-	pos := 0
-	for textBytes[pos] != 0x20 {
-		pos++
-	}
-
-	textBytes = textBytes[pos+1:]
-
-	text := string(textBytes)
-
+func parse(text string) LogMessage {
 	timeText := text[:21]
 	message := text[23:]
 
-	const refTime = "01/02/2006 -  15:04:05"
-
 	timeObj, _ := time.Parse(refTime, timeText)
 
-	m := parse(message)
-
-	return LogMessage{timeObj, text, m}, nil
+	return LogMessage{timeObj, text, ParseLine(message)}
 }
 
-func parse(message string) ParsedMsg {
+func ParseLine(message string) ParsedMsg {
 	r := ParsedMsg{Type: -1}
 	var m []string
 

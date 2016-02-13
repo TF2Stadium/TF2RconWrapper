@@ -262,14 +262,14 @@ func (c *TF2RconConnection) RemoveTag(tagName string) error {
 }
 
 // RedirectLogs send the logaddress_add command
-func (c *TF2RconConnection) RedirectLogs(ip string, port string) error {
-	query := "logaddress_add " + ip + ":" + port
+func (c *TF2RconConnection) RedirectLogs(addr string) error {
+	query := "logaddress_add " + addr
 	_, err := c.Query(query)
 	return err
 }
 
-func (c *TF2RconConnection) StopLogRedirection(localip string, port string) {
-	query := fmt.Sprintf("logaddress_del %s:%s", localip, port)
+func (c *TF2RconConnection) StopLogRedirection(addr string) {
+	query := fmt.Sprintf("logaddress_del %s", addr)
 	c.Query(query)
 }
 

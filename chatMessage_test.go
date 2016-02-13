@@ -1,11 +1,12 @@
 package TF2RconWrapper
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var logs []string = []string{
+var logs = []string{
 	`"Sk1LL0<2><[U:1:198288660]><Unassigned>" joined team "Red"`,
 	`"Sk1LL0<2><[U:1:198288660]><Red>" changed role to "scout"`,
 	`"Sk1LL0<2><[U:1:198288660]><Red>" changed role to "soldier"`,
@@ -20,7 +21,7 @@ var logs []string = []string{
 
 func TestParse(t *testing.T) {
 	for i := range logs {
-		m := parse(logs[i])
+		m := ParseLine(logs[i])
 
 		switch i {
 
