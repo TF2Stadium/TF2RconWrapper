@@ -93,7 +93,7 @@ func getSecret(data []byte) (string, int, error) {
 	}
 
 	bytes := data[5:]
-	var pos int
+	pos := 5
 
 	for bytes[pos] != 0x20 {
 		pos++
@@ -114,11 +114,10 @@ func getSecret(data []byte) (string, int, error) {
 const refTime = "01/02/2006 -  15:04:05"
 
 func parse(text string) LogMessage {
-	timeText := text[:21]
-	message := text[23:]
+	timeText := text[5:26]
+	message := text[28:]
 
 	timeObj, _ := time.Parse(refTime, timeText)
-
 	return LogMessage{timeObj, text, ParseLine(message)}
 }
 
@@ -128,7 +127,6 @@ func ParseLine(message string) ParsedMsg {
 
 	isPlayerMessage := false
 	playerData := PlayerData{}
-
 	switch {
 	case rPlayerGlobalMessage.MatchString(message):
 		m = rPlayerGlobalMessage.FindStringSubmatch(message)

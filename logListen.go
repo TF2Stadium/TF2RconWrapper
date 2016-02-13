@@ -97,9 +97,8 @@ func (l *Listener) RemoveSource(s *Source, m *TF2RconConnection) {
 }
 
 func (l *Listener) start(conn *net.UDPConn) {
-	buff := make([]byte, 512)
-
 	for {
+		buff := make([]byte, 512)
 		n, err := conn.Read(buff)
 		if err != nil {
 			log.Println(err)
@@ -134,7 +133,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 
 			handler := source.handler
 
-			m := parse(string(buff[pos:]))
+			m := parse(string(buff[pos : n-2]))
 
 			switch m.Parsed.Type {
 			case PlayerGlobalMessage:
@@ -172,6 +171,7 @@ func (l *Listener) AddSource(handler Handler, m *TF2RconConnection) *Source {
 	l.mapMu.RLock()
 	_, ok := l.sources[secret]
 	for ok {
+		secret = strconv.Itoa(rand.Intn(999998) + 1)
 		_, ok = l.sources[secret]
 	}
 	l.mapMu.RUnlock()
