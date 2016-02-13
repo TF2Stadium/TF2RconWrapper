@@ -56,17 +56,17 @@ func (s *Source) Logs() *bytes.Buffer {
 }
 
 // NewListener returns a new Listener
-func NewListener(addr string) *Listener {
+func NewListener(addr string) (*Listener, error) {
 	return NewListenerAddr(addr, addr)
 }
 
-func NewListenerAddr(listenAddr string, redirectAddr string) *Listener {
+func NewListenerAddr(listenAddr string, redirectAddr string) (*Listener, error) {
 	addr, err := net.ResolveUDPAddr("udp", listenAddr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return &Listener{
+	l := &Listener{
 		mapMu:    new(sync.RWMutex),
 		sources:  make(map[string]*Source),
 		channels: make(map[string](chan string)),
@@ -74,6 +74,14 @@ func NewListenerAddr(listenAddr string, redirectAddr string) *Listener {
 		listenAddr:   addr,
 		redirectAddr: redirectAddr,
 	}
+
+	conn, err := net.ListenUDP("udp", l.listenAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	go l.start(conn)
+	return l, nil
 }
 
 func (l *Listener) RemoveSource(s *Source, m *TF2RconConnection) {
@@ -88,14 +96,7 @@ func (l *Listener) RemoveSource(s *Source, m *TF2RconConnection) {
 	m.StopLogRedirection(l.redirectAddr)
 }
 
-func (l *Listener) start() {
-	log.SetFlags(log.Llongfile)
-
-	conn, err := net.ListenUDP("udp4", l.listenAddr)
-	if err != nil {
-		panic(err)
-	}
-
+func (l *Listener) start(conn *net.UDPConn) {
 	buff := make([]byte, 512)
 
 	for {
