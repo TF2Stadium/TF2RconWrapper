@@ -60,8 +60,8 @@ func NewListener(addr string) (*Listener, error) {
 	return NewListenerAddr(addr, addr)
 }
 
-func NewListenerAddr(listenAddr string, redirectAddr string) (*Listener, error) {
-	addr, err := net.ResolveUDPAddr("udp", listenAddr)
+func NewListenerAddr(port, redirectAddr string) (*Listener, error) {
+	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func NewListenerAddr(listenAddr string, redirectAddr string) (*Listener, error) 
 		redirectAddr: redirectAddr,
 	}
 
-	conn, err := net.ListenUDP("udp", l.listenAddr)
+	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return nil, err
 	}
