@@ -24,6 +24,11 @@ var (
 	CVarValueRegex    = regexp.MustCompile(`^"(?:.*?)" = "(.*?)"`)
 )
 
+func (c *TF2RconConnection) QueryNoResp(req string) error {
+	_, err := c.rc.Write(req)
+	return err
+}
+
 // Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
 	reqID, reqErr := c.rc.Write(req)
