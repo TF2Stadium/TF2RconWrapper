@@ -24,6 +24,11 @@ var (
 	CVarValueRegex    = regexp.MustCompile(`^"(?:.*?)" = "(.*?)"`)
 )
 
+func (c *TF2RconConnection) QueryNoResp(req string) error {
+	_, err := c.rc.Write(req)
+	return err
+}
+
 // Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
 	reqID, reqErr := c.rc.Write(req)
@@ -262,14 +267,14 @@ func (c *TF2RconConnection) RemoveTag(tagName string) error {
 }
 
 // RedirectLogs send the logaddress_add command
-func (c *TF2RconConnection) RedirectLogs(ip string, port string) error {
-	query := "logaddress_add " + ip + ":" + port
+func (c *TF2RconConnection) RedirectLogs(addr string) error {
+	query := "logaddress_add " + addr
 	_, err := c.Query(query)
 	return err
 }
 
-func (c *TF2RconConnection) StopLogRedirection(localip string, port string) {
-	query := fmt.Sprintf("logaddress_del %s:%s", localip, port)
+func (c *TF2RconConnection) StopLogRedirection(addr string) {
+	query := fmt.Sprintf("logaddress_del %s", addr)
 	c.Query(query)
 }
 
