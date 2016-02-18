@@ -148,10 +148,10 @@ func (l *Listener) start(conn *net.UDPConn) {
 			case PlayerChangedTeam:
 				d := m.Parsed.Data.(PlayerData)
 				handler.PlayerTeamChange(d, d.NewTeam)
-			case WorldPlayerConnected:
+			case PlayerConnected:
 				d := m.Parsed.Data.(PlayerData)
 				handler.PlayerConnected(d)
-			case WorldPlayerDisconnected:
+			case PlayerDisconnected:
 				d := m.Parsed.Data.(PlayerData)
 				handler.PlayerDisconnected(d)
 			case WorldGameOver:
