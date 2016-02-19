@@ -14,13 +14,26 @@ type Handler interface {
 	PlayerConnected(PlayerData)
 	PlayerDisconnected(PlayerData)
 
-	PlayerGlobalMessage(PlayerData, string)
+	PlayerGlobalMessage(PlayerData, string) // strings are chat message
 	PlayerTeamMessage(PlayerData, string)
 
-	PlayerClassChange(PlayerData, string) // string -> new classes
-	PlayerTeamChange(PlayerData, string)  // string -> new team
+	PlayerSpawned(PlayerData, string)     // string is class
+	PlayerClassChange(PlayerData, string) // string is new classes
+	PlayerTeamChange(PlayerData, string)  // string is new team
 
+	PlayerKilled(PlayerKill)
+	PlayerDamaged(PlayerDamage)
+	PlayerHealed(PlayerHeal)
+	PlayerKilledMedic(PlayerTrigger)
+	PlayerUberFinished(PlayerData)
+	PlayerBlockedCapture(PlayerData)
+	PlayerItemPickup(ItemPickup)
+
+	TeamPointCapture(TeamData)
+	TeamScoreUpdate(TeamData)
 	GameOver()
+
+	WorldRoundWin(string) // string is team which won
 
 	CVarChange(variable string, value string)
 	LogFileClosed()
@@ -135,31 +148,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 
 			m := parse(string(buff[pos : n-2]))
 
-			switch m.Parsed.Type {
-			case PlayerGlobalMessage:
-				d := m.Parsed.Data.(PlayerData)
-				handler.PlayerGlobalMessage(d, d.Text)
-			case PlayerTeamMessage:
-				d := m.Parsed.Data.(PlayerData)
-				handler.PlayerTeamMessage(d, d.Text)
-			case PlayerChangedClass:
-				d := m.Parsed.Data.(PlayerData)
-				handler.PlayerClassChange(d, d.Class)
-			case PlayerChangedTeam:
-				d := m.Parsed.Data.(PlayerData)
-				handler.PlayerTeamChange(d, d.NewTeam)
-			case PlayerConnected:
-				d := m.Parsed.Data.(PlayerData)
-				handler.PlayerConnected(d)
-			case PlayerDisconnected:
-				d := m.Parsed.Data.(PlayerData)
-				handler.PlayerDisconnected(d)
-			case WorldGameOver:
-				handler.GameOver()
-			case ServerCvar:
-				d := m.Parsed.Data.(CvarData)
-				handler.CVarChange(d.Variable, d.Value)
-			}
+			m.Parsed.CallHandler(handler)
 		}()
 	}
 }
