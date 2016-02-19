@@ -463,7 +463,7 @@ func ParseLine(message string) ParsedMsg {
 		r.Data = team
 		r.Type = TeamPointCapture
 	case rTeamScoreUpdate.MatchString(message):
-		m := rTeamPointCapture.FindStringSubmatch(message)
+		m := rTeamScoreUpdate.FindStringSubmatch(message)
 		team := TeamData{
 			Team:  m[1],
 			Score: m[2],
