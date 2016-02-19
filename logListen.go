@@ -10,33 +10,27 @@ import (
 	"time"
 )
 
-type Handler interface {
-	PlayerConnected(PlayerData)
-	PlayerDisconnected(PlayerData)
-
-	PlayerGlobalMessage(PlayerData, string) // strings are chat message
-	PlayerTeamMessage(PlayerData, string)
-
-	PlayerSpawned(PlayerData, string)     // string is class
-	PlayerClassChange(PlayerData, string) // string is new classes
-	PlayerTeamChange(PlayerData, string)  // string is new team
-
-	PlayerKilled(PlayerKill)
-	PlayerDamaged(PlayerDamage)
-	PlayerHealed(PlayerHeal)
-	PlayerKilledMedic(PlayerTrigger)
-	PlayerUberFinished(PlayerData)
-	PlayerBlockedCapture(PlayerData)
-	PlayerItemPickup(ItemPickup)
-
-	TeamPointCapture(TeamData)
-	TeamScoreUpdate(TeamData)
-	GameOver()
-
-	WorldRoundWin(string) // string is team which won
-
-	CVarChange(variable string, value string)
-	LogFileClosed()
+type EventListener struct {
+	PlayerConnected      func(PlayerData)
+	PlayerDisconnected   func(PlayerData)
+	PlayerGlobalMessage  func(PlayerData, string) // strings are chat message
+	PlayerTeamMessage    func(PlayerData, string)
+	PlayerSpawned        func(PlayerData, string) // string is class
+	PlayerClassChanged   func(PlayerData, string) // string is new classes
+	PlayerTeamChange     func(PlayerData, string) // string is new team
+	PlayerKilled         func(PlayerKill)
+	PlayerDamaged        func(PlayerDamage)
+	PlayerHealed         func(PlayerHeal)
+	PlayerKilledMedic    func(PlayerTrigger)
+	PlayerUberFinished   func(PlayerData)
+	PlayerBlockedCapture func(CPData, PlayerData) // cp blocked by player
+	PlayerItemPickup     func(ItemPickup)
+	TeamPointCapture     func(TeamData)
+	TeamScoreUpdate      func(TeamData)
+	GameOver             func()
+	WorldRoundWin        func(string) // string is team which won
+	CVarChange           func(variable string, value string)
+	LogFileClosed        func()
 }
 
 type Listener struct {
@@ -54,7 +48,7 @@ type Source struct {
 	logs   *bytes.Buffer
 
 	handlerMu *sync.Mutex //protects handler and closed
-	handler   Handler
+	handler   *EventListener
 	closed    bool
 }
 
@@ -153,7 +147,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 	}
 }
 
-func (l *Listener) AddSource(handler Handler, m *TF2RconConnection) *Source {
+func (l *Listener) AddSource(handler *EventListener, m *TF2RconConnection) *Source {
 	secret := strconv.Itoa(rand.Intn(999998) + 1)
 	rand.Seed(time.Now().Unix())
 
@@ -168,7 +162,7 @@ func (l *Listener) AddSource(handler Handler, m *TF2RconConnection) *Source {
 	return l.AddSourceSecret(secret, handler, m)
 }
 
-func (l *Listener) AddSourceSecret(secret string, handler Handler, m *TF2RconConnection) *Source {
+func (l *Listener) AddSourceSecret(secret string, handler *EventListener, m *TF2RconConnection) *Source {
 	s := newSource(secret, handler)
 
 	l.mapMu.Lock()
@@ -180,7 +174,7 @@ func (l *Listener) AddSourceSecret(secret string, handler Handler, m *TF2RconCon
 	return s
 }
 
-func newSource(secret string, handler Handler) *Source {
+func newSource(secret string, handler *EventListener) *Source {
 	return &Source{
 		Secret: secret,
 		logsMu: new(sync.RWMutex),
