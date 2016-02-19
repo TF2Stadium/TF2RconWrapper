@@ -85,54 +85,54 @@ type LogMessage struct {
 }
 
 type TeamData struct {
-	Team    string
-	Trigger string
-	CP      string
-	CPName  string
+	Team   string `json:"team"`
+	CP     string `json:"cp"`
+	CPName string `json:"cpname"`
+	Score  string `json:"score"`
 }
 
 type ItemPickup struct {
-	PlayerData PlayerData
-	Item       string
-	Healing    int
+	PlayerData PlayerData `json:"playerdata"`
+	Item       string     `json:"item"`
+	Healing    int        `json:"healing"`
 }
 
 type PlayerTrigger struct {
 	//player1 triggered "Foo" against player2
-	Player1 PlayerData
-	Player2 PlayerData
+	Player1 PlayerData `json:"player1"`
+	Player2 PlayerData `json:"player2"`
 }
 
 type PlayerKill struct {
 	PlayerTrigger
-	Weapon     string
-	CustomKill string
+	Weapon     string `json:"weapon"`
+	CustomKill string `json:"customkill"`
 }
 
 type PlayerDamage struct {
 	PlayerTrigger
-	Damage  int
-	Weapon  string
-	Airshot bool
+	Damage  int    `json:"damage"`
+	Weapon  string `json:"weapon"`
+	Airshot bool   `json:"airshot"`
 }
 
 type PlayerHeal struct {
 	PlayerTrigger
-	Healed int // health gained
+	Healed int `json:"healed"` // health gained
 }
 
 //When a player says something in the global chat, or when they join the game
 type PlayerData struct {
-	Username string
+	Username string `json:"username"`
 
-	SteamId string
-	UserId  string
+	SteamId string `json:"steamid"`
+	UserId  string `json:"userid"`
 
-	Team    string
-	NewTeam string
+	Team    string `json:"team"`
+	NewTeam string `json:"newteam"`
 
-	Text  string
-	Class string
+	Text  string `json:"text"`
+	Class string `json:"class"`
 }
 
 type CvarData struct {
@@ -146,8 +146,59 @@ type ParsedMsg struct {
 }
 
 var (
-	ErrInvalidPacket = errors.New("Invalid Packet")
+	//ErrInvalidPacket represents an error when an invalid packet is found
+	ErrInvalidPacket = errors.New("invalid packet")
 )
+
+func (p *ParsedMsg) CallHandler(handler Handler) {
+	switch p.Type {
+	case PlayerGlobalMessage:
+		d := p.Data.(PlayerData)
+		handler.PlayerGlobalMessage(d, d.Text)
+	case PlayerTeamMessage:
+		d := p.Data.(PlayerData)
+		handler.PlayerTeamMessage(d, d.Text)
+	case PlayerChangedClass:
+		d := p.Data.(PlayerData)
+		handler.PlayerClassChange(d, d.Class)
+	case PlayerPickedUpItem:
+		handler.PlayerItemPickup(p.Data.(ItemPickup))
+	case PlayerSpawned:
+		d := p.Data.(PlayerData)
+		handler.PlayerSpawned(d, d.Class)
+	case PlayerChangedTeam:
+		d := p.Data.(PlayerData)
+		handler.PlayerTeamChange(d, d.NewTeam)
+	case PlayerConnected:
+		handler.PlayerConnected(p.Data.(PlayerData))
+	case PlayerKilled:
+		handler.PlayerKilled(p.Data.(PlayerKill))
+	case PlayerDamaged:
+		handler.PlayerDamaged(p.Data.(PlayerDamage))
+	case PlayerHealed:
+		handler.PlayerHealed(p.Data.(PlayerHeal))
+	case PlayerKilledMedic:
+		handler.PlayerKilledMedic(p.Data.(PlayerTrigger))
+	case PlayerUberFinished:
+		handler.PlayerUberFinished(p.Data.(PlayerData))
+	case PlayerBlockedCapture:
+		handler.PlayerBlockedCapture(p.Data.(PlayerData))
+	case TeamPointCapture:
+		handler.TeamPointCapture(p.Data.(TeamData))
+	case TeamScoreUpdate:
+		handler.TeamScoreUpdate(p.Data.(TeamData))
+	case WorldRoundWin:
+		handler.WorldRoundWin(p.Data.(string))
+	//case WorldRoundStart:
+	case PlayerDisconnected:
+		handler.PlayerDisconnected(p.Data.(PlayerData))
+	case WorldGameOver:
+		handler.GameOver()
+	case ServerCvar:
+		d := p.Data.(CvarData)
+		handler.CVarChange(d.Variable, d.Value)
+	}
+}
 
 func getSecret(data []byte) (string, int, error) {
 	if !(len(data) > 6) {
@@ -236,6 +287,13 @@ func ParseLine(message string) ParsedMsg {
 		playerData.NewTeam = m[5]
 		r.Data = playerData
 		r.Type = PlayerChangedTeam
+
+	case rPlayerSpawned.MatchString(message):
+		m := rPlayerSpawned.FindStringSubmatch(message)
+		playerData := getPlayerData(m, 1, true)
+		playerData.Class = m[5]
+		r.Data = playerData
+		r.Type = PlayerSpawned
 
 	case rPlayerPickedUp.MatchString(message):
 		m := rPlayerPickedUp.FindStringSubmatch(message)
@@ -354,6 +412,23 @@ func ParseLine(message string) ParsedMsg {
 
 	case rLogFiledClosed.MatchString(message):
 		r.Type = LogFileClosed
+	case rTeamPointCapture.MatchString(message):
+		m := rTeamPointCapture.FindStringSubmatch(message)
+		team := TeamData{
+			Team:   m[1],
+			CP:     m[2],
+			CPName: m[3],
+		}
+		r.Data = team
+		r.Type = TeamPointCapture
+	case rTeamScoreUpdate.MatchString(message):
+		m := rTeamPointCapture.FindStringSubmatch(message)
+		team := TeamData{
+			Team:  m[1],
+			Score: m[2],
+		}
+		r.Data = team
+		r.Type = TeamScoreUpdate
 	}
 
 	return r
