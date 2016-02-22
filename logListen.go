@@ -53,13 +53,7 @@ type Source struct {
 }
 
 func (s *Source) Logs() *bytes.Buffer {
-	s.logsMu.RLock()
-	b := s.logs.Bytes()
-	var logs []byte
-	copy(b, logs)
-	s.logsMu.RUnlock()
-
-	return bytes.NewBuffer(logs)
+	return s.logs
 }
 
 // NewListener returns a new Listener
@@ -133,9 +127,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 			}
 
 			source.logsMu.Lock()
-			source.logs.WriteString("L ")
-			source.logs.Write(buff[pos : n-2])
-			source.logs.WriteByte('\n')
+			source.logs.Write(buff[11 : n-1])
 			source.logsMu.Unlock()
 
 			handler := source.handler
@@ -148,13 +140,13 @@ func (l *Listener) start(conn *net.UDPConn) {
 }
 
 func (l *Listener) AddSource(handler *EventListener, m *TF2RconConnection) *Source {
-	secret := strconv.Itoa(rand.Intn(999998) + 1)
+	secret := strconv.Itoa(100000 + rand.Intn(800000))
 	rand.Seed(time.Now().Unix())
 
 	l.mapMu.RLock()
 	_, ok := l.sources[secret]
 	for ok {
-		secret = strconv.Itoa(rand.Intn(999998) + 1)
+		secret = strconv.Itoa(100000 + rand.Intn(800000))
 		_, ok = l.sources[secret]
 	}
 	l.mapMu.RUnlock()
