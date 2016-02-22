@@ -221,8 +221,12 @@ func (p *ParsedMsg) CallHandler(handler *EventListener) {
 	case WorldGameOver:
 		eventhandler = handler.GameOver
 	case ServerCvar:
-		in = []interface{}{p.Data.(CvarData)}
+		in = []interface{}{p.Data.(CvarData).Value, p.Data.(CvarData).Variable}
 		eventhandler = handler.CVarChange
+	case LogFileClosed:
+		eventhandler = handler.LogFileClosed
+	default:
+		return
 	}
 
 	var args []reflect.Value
