@@ -46,7 +46,8 @@ var (
 	rRoundStart = regexp.MustCompile(`^World triggered "Round_Start"`)
 	rServerCvar = regexp.MustCompile(`^server_cvar: "(.*)" "(.*)"`)
 
-	rLogFiledClosed = regexp.MustCompile("^Log file closed.")
+	rTournamentStarted = regexp.MustCompile(`^Tournament mode started\nBlue Team: \w+\nRed Team: \w`)
+	rLogFiledClosed    = regexp.MustCompile("^Log file closed.")
 )
 
 const (
@@ -73,6 +74,7 @@ const (
 	WorldRoundStart
 	ServerCvar
 
+	TournamentStarted
 	LogFileClosed
 )
 
@@ -456,6 +458,8 @@ func ParseLine(message string) ParsedMsg {
 
 	case rLogFiledClosed.MatchString(message):
 		r.Type = LogFileClosed
+	case rTournamentStarted.MatchString(message):
+		r.Type = TournamentStarted
 	case rTeamPointCapture.MatchString(message):
 		m := rTeamPointCapture.FindStringSubmatch(message)
 		team := TeamData{
