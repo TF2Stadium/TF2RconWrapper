@@ -227,6 +227,8 @@ func (p *ParsedMsg) CallHandler(handler *EventListener) {
 		eventhandler = handler.CVarChange
 	case LogFileClosed:
 		eventhandler = handler.LogFileClosed
+	case TournamentStarted:
+		eventhandler = handler.TournamentStarted
 	default:
 		return
 	}

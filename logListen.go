@@ -31,6 +31,7 @@ type EventListener struct {
 	WorldRoundWin        func(string) // string is team which won
 	CVarChange           func(variable string, value string)
 	LogFileClosed        func()
+	TournamentStarted    func()
 }
 
 type Listener struct {
