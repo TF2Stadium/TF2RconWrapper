@@ -106,7 +106,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 			log.Println(err)
 		}
 
-		secret, pos, err := getSecret(buff[0:n])
+		secret, Lpos, err := getSecret(buff[0:n])
 		if err != nil {
 			continue
 		}
@@ -133,7 +133,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 
 			handler := source.handler
 
-			m := parse(string(buff[pos : n-2]))
+			m := ParseLogEntry(string(buff[Lpos : n-2]))
 
 			m.Parsed.CallHandler(handler)
 		}()
@@ -141,7 +141,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 }
 
 func (l *Listener) AddSource(handler *EventListener, m *TF2RconConnection) *Source {
-	secret := strconv.Itoa(100000 + rand.Intn(800000))
+	secret := strconv.FormatUint(uint64(rand.Int63()+1), 10)
 	rand.Seed(time.Now().Unix())
 
 	l.mapMu.RLock()

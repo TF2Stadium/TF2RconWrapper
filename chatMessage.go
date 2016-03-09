@@ -245,42 +245,58 @@ func (p *ParsedMsg) CallHandler(handler *EventListener) {
 	method.Call(args)
 }
 
+/**
+Log Message layout:
+First Four Bytes: 0xff, 0xff, 0xff, 0xff
+Fifth Byte: 0x53 (ASCII code for 'S', denoting that the log message has a secret prepended)
+Text between 'S' and 'L': log secret, can be of variable length.
+Text after (and including L):
+L 01/02/2006 -  15:04:05: <log message>
+Second last byte: 0x0A (ASCII code for '\n', newline)
+Last byte: 0x00 (ASCII code for '\0', null character)
+*/
 func getSecret(data []byte) (string, int, error) {
-	if !(len(data) > 6) {
+	if len(data) <= 30 { //minimum length required
 		return "", 0, ErrInvalidPacket
 	}
 
-	if data[4] != 0x53 {
+	if data[4] != 0x53 { // 0x53 == 'S'
 		return "", 0, errors.New("Server trying to send a chat packet without a secret")
 	}
 
-	bytes := data[5:]
-	pos := 5
-
-	for bytes[pos] != 0x20 {
-		pos++
-		if pos >= len(bytes) {
+	content := data[5:]
+	Lpos := 6 //should be position of 'L' (0x4c) after the loop
+	for content[Lpos] != 0x4C {
+		Lpos++
+		if Lpos >= len(content) {
 			return "", 0, ErrInvalidPacket
 		}
 	}
 
-	secret := string(bytes[:pos-1])
-	if pos+1 >= len(data) {
+	secret := string(content[:Lpos])
+	if Lpos+1+len(" 03/09/2016 - 02:50:52:") >= len(data) {
 		//No message/time data
 		return "", 0, ErrInvalidPacket
 	}
 
-	return secret, pos + 1, nil
+	//content[5 + Lpos:]  is where from the actual log message starts
+	//==L 03/09/2016 - 02:50:52: <log message>\n\0
+	return secret, 5 + Lpos, nil
 }
 
-const refTime = "01/02/2006 -  15:04:05"
+//TimeFormat is the reference time used by the server
+//to represent time
+const TimeFormat = "01/02/2006 -  15:04:05"
 
-func parse(text string) LogMessage {
-	timeText := text[5:26]
-	message := text[28:]
+//ParseLogEntry parses a log entry of the format:
+//        L 03/09/2016 - 02:50:52: <log message>\n\0
+//and returns a LogMessage object
+func ParseLogEntry(line string) LogMessage {
+	timeStr := line[2:23]
+	message := line[25:]
 
-	timeObj, _ := time.Parse(refTime, timeText)
-	return LogMessage{timeObj, text, ParseLine(message)}
+	timeObj, _ := time.Parse(TimeFormat, timeStr)
+	return LogMessage{timeObj, message, ParseLine(message)}
 }
 
 func getPlayerData(matches []string, from int, includeTeam bool) PlayerData {
@@ -297,6 +313,7 @@ func getPlayerData(matches []string, from int, includeTeam bool) PlayerData {
 	return d
 }
 
+//ParseLine parses a log message (without the time entry)
 func ParseLine(message string) ParsedMsg {
 	r := ParsedMsg{Type: -1}
 
@@ -454,7 +471,6 @@ func ParseLine(message string) ParsedMsg {
 
 	case rServerCvar.MatchString(message):
 		m := rServerCvar.FindStringSubmatch(message)
-
 		r.Type = ServerCvar
 		r.Data = CvarData{Variable: m[1], Value: m[2]}
 
