@@ -22,7 +22,7 @@ const (
 // regexes used in the parser
 var (
 	rPlayerGlobalMessage  = regexp.MustCompile(logLineStart + `say` + logLineEnd)
-	rPlayerChangedClass   = regexp.MustCompile(logLineStart + `changed role to` + logLineEnd)
+	rPlayerChangedClass   = regexp.MustCompile(logLineStart + `changed role to "(scout|soldier|pyro|engineer|heavyweapons|demoman|sniper|medic|spy)"`)
 	rPlayerTeamMessage    = regexp.MustCompile(logLineStart + `say_team` + logLineEnd)
 	rPlayerChangedTeam    = regexp.MustCompile(logLineStart + `joined team` + logLineEnd)
 	rPlayerPickedUp       = regexp.MustCompile(logLineStart + `picked up item "(\w+)"(?: \(healing "(\d+)"\))*`)
@@ -173,7 +173,7 @@ func (p *ParsedMsg) CallHandler(handler *EventListener) {
 	case PlayerChangedClass:
 		d := p.Data.(PlayerData)
 		eventhandler = handler.PlayerClassChanged
-		in = []interface{}{d, d.Text}
+		in = []interface{}{d, d.Class}
 	case PlayerPickedUpItem:
 		eventhandler = handler.PlayerItemPickup
 		in = []interface{}{p.Data.(ItemPickup)}
