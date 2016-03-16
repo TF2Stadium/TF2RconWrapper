@@ -318,61 +318,6 @@ func ParseLine(message string) ParsedMsg {
 	r := ParsedMsg{Type: -1}
 
 	switch {
-	case rPlayerGlobalMessage.MatchString(message):
-		m := rPlayerGlobalMessage.FindStringSubmatch(message)
-
-		playerData := getPlayerData(m, 1, true)
-		playerData.Text = m[5]
-		r.Data = playerData
-		r.Type = PlayerGlobalMessage
-
-	case rPlayerTeamMessage.MatchString(message):
-		m := rPlayerTeamMessage.FindStringSubmatch(message)
-
-		playerData := getPlayerData(m, 1, true)
-		playerData.Text = m[5]
-		r.Data = playerData
-		r.Type = PlayerTeamMessage
-
-	case rPlayerChangedClass.MatchString(message):
-		m := rPlayerChangedClass.FindStringSubmatch(message)
-
-		playerData := getPlayerData(m, 1, true)
-		playerData.Class = m[5]
-		r.Data = playerData
-		r.Type = PlayerChangedClass
-
-	case rPlayerChangedTeam.MatchString(message):
-		m := rPlayerChangedTeam.FindStringSubmatch(message)
-
-		playerData := getPlayerData(m, 1, true)
-		playerData.NewTeam = m[5]
-		r.Data = playerData
-		r.Type = PlayerChangedTeam
-
-	case rPlayerSpawned.MatchString(message):
-		m := rPlayerSpawned.FindStringSubmatch(message)
-		playerData := getPlayerData(m, 1, true)
-		playerData.Class = m[5]
-		r.Data = playerData
-		r.Type = PlayerSpawned
-
-	case rPlayerPickedUp.MatchString(message):
-		m := rPlayerPickedUp.FindStringSubmatch(message)
-
-		playerData := getPlayerData(m, 1, true)
-		pickup := ItemPickup{
-			PlayerData: playerData,
-			Item:       m[5],
-		}
-
-		if len(m) == 7 {
-			pickup.Healing, _ = strconv.Atoi(m[6])
-		}
-
-		r.Data = pickup
-		r.Type = PlayerPickedUpItem
-
 	case rPlayerKilled.MatchString(message):
 		m := rPlayerKilled.FindStringSubmatch(message)
 
@@ -423,6 +368,61 @@ func ParseLine(message string) ParsedMsg {
 		}
 		r.Data = heal
 		r.Type = PlayerHealed
+
+	case rPlayerPickedUp.MatchString(message):
+		m := rPlayerPickedUp.FindStringSubmatch(message)
+
+		playerData := getPlayerData(m, 1, true)
+		pickup := ItemPickup{
+			PlayerData: playerData,
+			Item:       m[5],
+		}
+
+		if len(m) == 7 {
+			pickup.Healing, _ = strconv.Atoi(m[6])
+		}
+
+		r.Data = pickup
+		r.Type = PlayerPickedUpItem
+
+	case rPlayerGlobalMessage.MatchString(message):
+		m := rPlayerGlobalMessage.FindStringSubmatch(message)
+
+		playerData := getPlayerData(m, 1, true)
+		playerData.Text = m[5]
+		r.Data = playerData
+		r.Type = PlayerGlobalMessage
+
+	case rPlayerTeamMessage.MatchString(message):
+		m := rPlayerTeamMessage.FindStringSubmatch(message)
+
+		playerData := getPlayerData(m, 1, true)
+		playerData.Text = m[5]
+		r.Data = playerData
+		r.Type = PlayerTeamMessage
+
+	case rPlayerChangedClass.MatchString(message):
+		m := rPlayerChangedClass.FindStringSubmatch(message)
+
+		playerData := getPlayerData(m, 1, true)
+		playerData.Class = m[5]
+		r.Data = playerData
+		r.Type = PlayerChangedClass
+
+	case rPlayerChangedTeam.MatchString(message):
+		m := rPlayerChangedTeam.FindStringSubmatch(message)
+
+		playerData := getPlayerData(m, 1, true)
+		playerData.NewTeam = m[5]
+		r.Data = playerData
+		r.Type = PlayerChangedTeam
+
+	case rPlayerSpawned.MatchString(message):
+		m := rPlayerSpawned.FindStringSubmatch(message)
+		playerData := getPlayerData(m, 1, true)
+		playerData.Class = m[5]
+		r.Data = playerData
+		r.Type = PlayerSpawned
 
 	case rPlayerKilledMedic.MatchString(message):
 		m := rPlayerKilledMedic.FindStringSubmatch(message)
