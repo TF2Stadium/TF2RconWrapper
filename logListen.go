@@ -128,7 +128,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 			}
 
 			source.logsMu.Lock()
-			source.logs.Write(buff[11 : n-1])
+			source.logs.Write(buff[Lpos : n-1])
 			source.logsMu.Unlock()
 
 			handler := source.handler
