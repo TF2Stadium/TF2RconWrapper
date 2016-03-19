@@ -41,6 +41,7 @@ type Listener struct {
 
 	listenAddr   *net.UDPAddr
 	redirectAddr string
+	print        bool
 }
 
 type Source struct {
@@ -58,11 +59,11 @@ func (s *Source) Logs() *bytes.Buffer {
 }
 
 // NewListener returns a new Listener
-func NewListener(addr string) (*Listener, error) {
-	return NewListenerAddr(addr, addr)
+func NewListener(addr string, print bool) (*Listener, error) {
+	return NewListenerAddr(addr, addr, print)
 }
 
-func NewListenerAddr(port, redirectAddr string) (*Listener, error) {
+func NewListenerAddr(port, redirectAddr string, print bool) (*Listener, error) {
 	addr, err := net.ResolveUDPAddr("udp", ":"+port)
 	if err != nil {
 		return nil, err
@@ -75,6 +76,7 @@ func NewListenerAddr(port, redirectAddr string) (*Listener, error) {
 
 		listenAddr:   addr,
 		redirectAddr: redirectAddr,
+		print:        print,
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
@@ -109,6 +111,10 @@ func (l *Listener) start(conn *net.UDPConn) {
 		secret, Lpos, err := getSecret(buff[0:n])
 		if err != nil {
 			continue
+		}
+
+		if l.print {
+			log.Println(string(buff[0 : n-1]))
 		}
 
 		l.mapMu.RLock()
