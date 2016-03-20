@@ -97,7 +97,7 @@ func (l *Listener) RemoveSource(s *Source, m *TF2RconConnection) {
 	delete(l.sources, s.Secret)
 	l.mapMu.Unlock()
 
-	m.StopLogRedirection(l.redirectAddr)
+	go func() { m.StopLogRedirection(l.redirectAddr) }()
 }
 
 func (l *Listener) start(conn *net.UDPConn) {
