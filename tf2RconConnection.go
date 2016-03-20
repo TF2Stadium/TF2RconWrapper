@@ -17,11 +17,9 @@ type TF2RconConnection struct {
 
 var (
 	ErrUnknownCommand = errors.New("Unknown Command")
-	userIDRegex       = regexp.MustCompile(`^#\s+([0-9]+)`)
-	nameRegex         = regexp.MustCompile(`"(.*)"`)
-	uniqueIDRegex     = regexp.MustCompile(`\[U:\d*:\d*[:1]*\]`)
-	IPRegex           = regexp.MustCompile(`\d+\.\d+.\d+.\d+`)
 	CVarValueRegex    = regexp.MustCompile(`^"(?:.*?)" = "(.*?)"`)
+	//# userid name                uniqueid            connected ping loss state  adr
+	rePlayerInfo = regexp.MustCompile(`^#\s+(\d+)\s+"(.+)"\s+(\[U:1:\d+\])\s+\d+:\d+\s+\d+\s+\d+\s+\w+\s+(\d+\.+\d+\.\d+\.\d+:\d+)`)
 )
 
 func (c *TF2RconConnection) QueryNoResp(req string) error {
@@ -96,55 +94,38 @@ func (c *TF2RconConnection) SetConVar(cvar string, val string) (string, error) {
 
 // GetPlayers returns a list of players in the server. Includes bots.
 func (c *TF2RconConnection) GetPlayers() ([]Player, error) {
-	playerString, err := c.Query("status")
+	statusString, err := c.Query("status")
 	if err != nil {
 		return nil, err
 	}
 
+	index := strings.Index(statusString, "#")
+	i := 0
+	for index != -1 {
+		statusString, _ = c.Query("status")
+		index = strings.Index(statusString, "#")
+		i++
+		if i == 5 {
+			return nil, errors.New("Couldn't get output of status")
+		}
+	}
+
+	users := strings.Split(statusString[index:], "\n")
 	var list []Player
-	res := strings.Split(playerString, "\n")
-	if len(res) == 0 {
-		return list, errors.New("GetPlayers: empty status output")
+	for _, userString := range users {
+		if !rePlayerInfo.MatchString(userString) {
+			continue
+		}
+		matches := rePlayerInfo.FindStringSubmatch(userString)
+		player := Player{
+			UserID:   matches[1],
+			Username: matches[2],
+			SteamID:  matches[3],
+			Ip:       matches[4],
+		}
+		list = append(list, player)
 	}
 
-	for !strings.HasPrefix(res[0], "#") {
-		res = res[1:]
-	}
-	res = res[1:]
-
-	for _, line := range res {
-		if line == "" {
-			continue
-		}
-		if !strings.HasPrefix(line, "#") {
-			break
-		}
-
-		var matches []string
-
-		matches = userIDRegex.FindStringSubmatch(line)
-		if matches == nil {
-			continue
-		}
-
-		userID := matches[len(matches)-1]
-		loc := nameRegex.FindStringSubmatchIndex(line)
-		if loc == nil {
-			continue
-		}
-
-		name := line[loc[0]:loc[1]]
-		matches = uniqueIDRegex.FindStringSubmatch(line[loc[1]:])
-		if matches == nil {
-			list = append(list, Player{userID, name, "BOT", ""})
-			continue
-		}
-
-		uniqueID := matches[len(matches)-1]
-		ip := IPRegex.FindString(line[loc[1]:])
-		list = append(list, Player{userID, name, uniqueID, ip})
-
-	}
 	return list, nil
 }
 
@@ -275,7 +256,7 @@ func (c *TF2RconConnection) RedirectLogs(addr string) error {
 
 func (c *TF2RconConnection) StopLogRedirection(addr string) {
 	query := fmt.Sprintf("logaddress_del %s", addr)
-	c.Query(query)
+	c.QueryNoResp(query)
 }
 
 // Close closes the connection
