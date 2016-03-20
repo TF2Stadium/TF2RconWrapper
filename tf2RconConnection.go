@@ -101,7 +101,7 @@ func (c *TF2RconConnection) GetPlayers() ([]Player, error) {
 
 	index := strings.Index(statusString, "#")
 	i := 0
-	for index != -1 {
+	for index == -1 {
 		statusString, _ = c.Query("status")
 		index = strings.Index(statusString, "#")
 		i++
