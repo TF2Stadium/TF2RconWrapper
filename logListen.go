@@ -33,6 +33,8 @@ type EventListener struct {
 	CVarChange           func(variable string, value string)
 	LogFileClosed        func()
 	TournamentStarted    func()
+
+	success chan struct{}
 }
 
 type Listener struct {
@@ -53,6 +55,10 @@ type Source struct {
 	handlerMu *sync.Mutex //protects handler and closed
 	handler   *EventListener
 	closed    *int32
+
+	//fields used for test only
+	test bool
+	rcon *TF2RconConnection
 }
 
 func (s *Source) Logs() *bytes.Buffer {
@@ -132,20 +138,32 @@ func (l *Listener) start(conn *net.UDPConn) {
 				return
 			}
 
+			handler := source.handler
+
+			if source.test {
+				atomic.StoreInt32(source.closed, 1)
+				l.mapMu.Lock()
+				delete(l.sources, source.Secret)
+				l.mapMu.Unlock()
+
+				handler.success <- struct{}{}
+
+				source.rcon.StopLogRedirection(l.redirectAddr)
+				source.rcon.Close()
+				return
+			}
+
 			source.logsMu.Lock()
 			source.logs.Write(buff[Lpos : n-1])
 			source.logsMu.Unlock()
 
-			handler := source.handler
-
 			m := ParseLogEntry(string(buff[Lpos : n-2]))
-
 			m.Parsed.CallHandler(handler)
 		}()
 	}
 }
 
-func (l *Listener) AddSource(handler *EventListener, m *TF2RconConnection) *Source {
+func (l *Listener) getSecret() string {
 	secret := strconv.FormatUint(uint64(rand.Int63()+1), 10)
 	rand.Seed(time.Now().Unix())
 
@@ -157,11 +175,38 @@ func (l *Listener) AddSource(handler *EventListener, m *TF2RconConnection) *Sour
 	}
 	l.mapMu.RUnlock()
 
+	return secret
+}
+
+func (l *Listener) TestSource(m *TF2RconConnection) bool {
+	secret := l.getSecret()
+	e := &EventListener{success: make(chan struct{}, 1)}
+
+	s := newSource(secret, e, true)
+	s.rcon = m
+	l.mapMu.Lock()
+	l.sources[secret] = s
+	l.mapMu.Unlock()
+
+	m.Query("sv_logsecret " + secret)
+	m.RedirectLogs(l.redirectAddr)
+
+	tick := time.After(5 * time.Second)
+	select {
+	case <-tick:
+		return false
+	case <-e.success:
+		return true
+	}
+}
+
+func (l *Listener) AddSource(handler *EventListener, m *TF2RconConnection) *Source {
+	secret := l.getSecret()
 	return l.AddSourceSecret(secret, handler, m)
 }
 
 func (l *Listener) AddSourceSecret(secret string, handler *EventListener, m *TF2RconConnection) *Source {
-	s := newSource(secret, handler)
+	s := newSource(secret, handler, false)
 
 	l.mapMu.Lock()
 	l.sources[secret] = s
@@ -172,7 +217,7 @@ func (l *Listener) AddSourceSecret(secret string, handler *EventListener, m *TF2
 	return s
 }
 
-func newSource(secret string, handler *EventListener) *Source {
+func newSource(secret string, handler *EventListener, test bool) *Source {
 	return &Source{
 		Secret: secret,
 		logsMu: new(sync.RWMutex),
@@ -181,5 +226,6 @@ func newSource(secret string, handler *EventListener) *Source {
 		handlerMu: new(sync.Mutex),
 		handler:   handler,
 		closed:    new(int32),
+		test:      test,
 	}
 }
