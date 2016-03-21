@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/james4k/rcon"
 )
 
 // TF2RconConnection represents a rcon connection to a TF2 server
 type TF2RconConnection struct {
-	rc   *rcon.RemoteConsole
-	host string
+	rc       *rcon.RemoteConsole
+	host     string
+	password string
 }
 
 var (
@@ -284,5 +286,20 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &TF2RconConnection{rc, address}, nil
+	return &TF2RconConnection{rc, address, password}, nil
+}
+
+func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
+	var err error
+	var cur time.Duration
+
+	c.Close()
+	for cur += time.Second; cur <= duration; {
+		c.rc, err = rcon.Dial(c.host, c.password)
+		if err == nil {
+			return nil
+		}
+	}
+
+	return err
 }
