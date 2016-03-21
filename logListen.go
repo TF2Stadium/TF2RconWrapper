@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -51,7 +52,7 @@ type Source struct {
 
 	handlerMu *sync.Mutex //protects handler and closed
 	handler   *EventListener
-	closed    bool
+	closed    *int32
 }
 
 func (s *Source) Logs() *bytes.Buffer {
@@ -89,9 +90,7 @@ func NewListenerAddr(port, redirectAddr string, print bool) (*Listener, error) {
 }
 
 func (l *Listener) RemoveSource(s *Source, m *TF2RconConnection) {
-	s.handlerMu.Lock()
-	s.closed = true
-	s.handlerMu.Unlock()
+	atomic.StoreInt32(s.closed, 1)
 
 	l.mapMu.Lock()
 	delete(l.sources, s.Secret)
@@ -129,7 +128,7 @@ func (l *Listener) start(conn *net.UDPConn) {
 			source.handlerMu.Lock()
 			defer source.handlerMu.Unlock()
 
-			if source.closed {
+			if atomic.LoadInt32(source.closed) == 1 {
 				return
 			}
 
@@ -181,5 +180,6 @@ func newSource(secret string, handler *EventListener) *Source {
 
 		handlerMu: new(sync.Mutex),
 		handler:   handler,
+		closed:    new(int32),
 	}
 }
