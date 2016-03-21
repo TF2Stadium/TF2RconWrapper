@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/james4k/rcon"
@@ -12,7 +13,9 @@ import (
 
 // TF2RconConnection represents a rcon connection to a TF2 server
 type TF2RconConnection struct {
-	rc       *rcon.RemoteConsole
+	rcLock *sync.RWMutex
+	rc     *rcon.RemoteConsole
+
 	host     string
 	password string
 }
@@ -31,6 +34,13 @@ func (c *TF2RconConnection) QueryNoResp(req string) error {
 
 // Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
+	if c.rc == nil {
+		return "", errors.New("Not connected to RCON host")
+	}
+
+	c.rcLock.RLock()
+	defer c.rcLock.Unlock()
+
 	reqID, reqErr := c.rc.Write(req)
 	if reqErr != nil {
 		// log.Println(reqErr)
@@ -286,12 +296,16 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &TF2RconConnection{rc, address, password}, nil
+
+	return &TF2RconConnection{new(sync.RWMutex), rc, address, password}, nil
 }
 
 func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
 	var err error
 	var cur time.Duration
+
+	c.rcLock.Lock()
+	defer c.rcLock.Unlock()
 
 	c.Close()
 	for cur += time.Second; cur <= duration; {
