@@ -28,6 +28,9 @@ var (
 )
 
 func (c *TF2RconConnection) QueryNoResp(req string) error {
+	c.rcLock.RLock()
+	defer c.rcLock.RUnlock()
+
 	_, err := c.rc.Write(req)
 	return err
 }
