@@ -35,7 +35,7 @@ func (c *TF2RconConnection) QueryNoResp(req string) error {
 // Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
 	c.rcLock.RLock()
-	defer c.rcLock.Unlock()
+	defer c.rcLock.RUnlock()
 
 	reqID, reqErr := c.rc.Write(req)
 	if reqErr != nil {
