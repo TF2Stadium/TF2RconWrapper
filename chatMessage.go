@@ -48,6 +48,8 @@ var (
 
 	rTournamentStarted = regexp.MustCompile(`^Tournament mode started\nBlue Team: \w+\nRed Team: \w`)
 	rLogFiledClosed    = regexp.MustCompile("^Log file closed.")
+
+	rRconCommand = regexp.MustCompile(`^rcon from "(.+)": command "(.+)"`)
 )
 
 const (
@@ -76,6 +78,8 @@ const (
 
 	TournamentStarted
 	LogFileClosed
+
+	RconCommand
 )
 
 //LogMessage represents a log message in a TF2 server, and contains a timestamp
@@ -229,6 +233,10 @@ func (p *ParsedMsg) CallHandler(handler *EventListener) {
 		eventhandler = handler.LogFileClosed
 	case TournamentStarted:
 		eventhandler = handler.TournamentStarted
+	case RconCommand:
+		arr := p.Data.([]string)
+		in = []interface{}{arr[0], arr[1]}
+		eventhandler = handler.RconCommand
 	default:
 		return
 	}
@@ -496,6 +504,11 @@ func ParseLine(message string) ParsedMsg {
 		}
 		r.Data = team
 		r.Type = TeamScoreUpdate
+
+	case rRconCommand.MatchString(message):
+		m := rRconCommand.FindStringSubmatch(message)
+		r.Data = []string{m[1], m[2]}
+		r.Type = RconCommand
 	}
 
 	return r

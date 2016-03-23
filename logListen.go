@@ -33,6 +33,7 @@ type EventListener struct {
 	CVarChange           func(variable string, value string)
 	LogFileClosed        func()
 	TournamentStarted    func()
+	RconCommand          func(from, command string) // from - IP Address, command - command executed
 
 	success chan struct{}
 }

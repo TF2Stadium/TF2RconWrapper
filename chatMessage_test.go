@@ -29,6 +29,7 @@ var logs = []string{
 	`"≫HarZe<3><[U:1:40572775]><>" connected, address "0.0.0.0:27005"`,
 	`"Tedstur<9><[U:1:98355052]><Red>" triggered "damage" against "Lyreix | TF2Stadium.com<4><[U:1:56108026]><Blue>" (damage "150") (realdamage "125") (weapon "awper_hand") (headshot "1")`,
 	`"Slappy™<11><[U:1:56973094]><Blue>" triggered "captureblocked" (cp "0") (cpname "#koth_viaduct_cap") (position "-1727 -405 192")`,
+	`rcon from "176.9.138.143:50647": command "sv_logflush 1; tv_stoprecord; kickall Reservation ended, every player can download the STV demo at http:/​/serveme.tf"`,
 }
 
 func TestParse(t *testing.T) {
@@ -165,6 +166,9 @@ func TestParse(t *testing.T) {
 		case 20:
 			require.Equal(t, m.Type, PlayerBlockedCapture)
 			assert.Equal(t, m.Data.([]interface{})[0], CPData{"0", "#koth_viaduct_cap"})
+		case 21:
+			require.Equal(t, m.Type, RconCommand)
+			assert.Equal(t, m.Data.([]string), []string{"176.9.138.143:50647", "sv_logflush 1; tv_stoprecord; kickall Reservation ended, every player can download the STV demo at http:/​/serveme.tf"})
 		}
 	}
 }
