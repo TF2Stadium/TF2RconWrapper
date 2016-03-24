@@ -27,6 +27,12 @@ var (
 	rePlayerInfo = regexp.MustCompile(`^#\s+(\d+)\s+"(.+)"\s+(\[U:1:\d+\])\s+\d+:\d+\s+\d+\s+\d+\s+\w+\s+(\d+\.+\d+\.\d+\.\d+:\d+)`)
 )
 
+type UnknownCommand string
+
+func (c UnknownCommand) Error() string {
+	return "unknown command: " + string(c)
+}
+
 func (c *TF2RconConnection) QueryNoResp(req string) error {
 	c.rcLock.RLock()
 	defer c.rcLock.RUnlock()
@@ -70,7 +76,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 	}
 
 	if strings.HasPrefix(resp, "Unknown command") {
-		return resp, ErrUnknownCommand
+		return resp, UnknownCommand(req)
 	}
 
 	return resp, nil
