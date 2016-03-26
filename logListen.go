@@ -63,7 +63,11 @@ type Source struct {
 }
 
 func (s *Source) Logs() *bytes.Buffer {
-	return s.logs
+	s.logsMu.RLock()
+	logs := bytes.NewBuffer(s.logs.Bytes())
+	s.logsMu.RUnlock()
+
+	return logs
 }
 
 // NewListener returns a new Listener
@@ -103,12 +107,12 @@ func (l *Listener) RemoveSource(s *Source, m *TF2RconConnection) {
 	delete(l.sources, s.Secret)
 	l.mapMu.Unlock()
 
-	go func() { m.StopLogRedirection(l.redirectAddr) }()
+	m.StopLogRedirection(l.redirectAddr)
 }
 
 func (l *Listener) start(conn *net.UDPConn) {
 	for {
-		buff := make([]byte, 512)
+		buff := make([]byte, 2048)
 		n, err := conn.Read(buff)
 		if err != nil {
 			log.Println(err)
