@@ -307,13 +307,14 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 
 func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
 	var err error
-	var cur time.Duration
 
 	c.rcLock.Lock()
 	defer c.rcLock.Unlock()
 
 	c.Close()
-	for cur += time.Second; cur <= duration; {
+	now := time.Now()
+
+	for time.Since(now) <= duration {
 		c.rc, err = rcon.Dial(c.host, c.password)
 		if err == nil {
 			return nil
