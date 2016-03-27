@@ -53,9 +53,8 @@ type Source struct {
 	logsMu *sync.RWMutex //protects logs
 	logs   *bytes.Buffer
 
-	handlerMu *sync.Mutex //protects handler and closed
-	handler   *EventListener
-	closed    *int32
+	handler *EventListener
+	closed  *int32
 
 	//fields used for test only
 	test bool
@@ -136,9 +135,6 @@ func (l *Listener) start(conn *net.UDPConn) {
 		}
 
 		go func() {
-			source.handlerMu.Lock()
-			defer source.handlerMu.Unlock()
-
 			if atomic.LoadInt32(source.closed) == 1 {
 				return
 			}
@@ -146,10 +142,11 @@ func (l *Listener) start(conn *net.UDPConn) {
 			handler := source.handler
 
 			if source.test {
-				atomic.StoreInt32(source.closed, 1)
 				l.mapMu.Lock()
 				delete(l.sources, source.Secret)
 				l.mapMu.Unlock()
+
+				atomic.StoreInt32(source.closed, 1)
 
 				handler.success <- struct{}{}
 
@@ -224,13 +221,11 @@ func (l *Listener) AddSourceSecret(secret string, handler *EventListener, m *TF2
 
 func newSource(secret string, handler *EventListener, test bool) *Source {
 	return &Source{
-		Secret: secret,
-		logsMu: new(sync.RWMutex),
-		logs:   new(bytes.Buffer),
-
-		handlerMu: new(sync.Mutex),
-		handler:   handler,
-		closed:    new(int32),
-		test:      test,
+		Secret:  secret,
+		logsMu:  new(sync.RWMutex),
+		logs:    new(bytes.Buffer),
+		handler: handler,
+		closed:  new(int32),
+		test:    test,
 	}
 }
