@@ -13,7 +13,7 @@ import (
 
 // TF2RconConnection represents a rcon connection to a TF2 server
 type TF2RconConnection struct {
-	rcLock *sync.RWMutex
+	rcLock sync.RWMutex
 	rc     *rcon.RemoteConsole
 
 	host     string
@@ -34,6 +34,10 @@ func (c UnknownCommand) Error() string {
 }
 
 func (c *TF2RconConnection) QueryNoResp(req string) error {
+	if c.rc == nil {
+		return errors.New("RCON connection is nil")
+	}
+
 	c.rcLock.RLock()
 	defer c.rcLock.RUnlock()
 
@@ -43,6 +47,10 @@ func (c *TF2RconConnection) QueryNoResp(req string) error {
 
 // Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
+	if c.rc == nil {
+		return "", errors.New("RCON connection is nil")
+	}
+
 	c.rcLock.RLock()
 	defer c.rcLock.RUnlock()
 
@@ -276,6 +284,10 @@ func (c *TF2RconConnection) StopLogRedirection(addr string) {
 
 // Close closes the connection
 func (c *TF2RconConnection) Close() {
+	if c.rc == nil {
+		return
+	}
+
 	c.rcLock.Lock()
 	c.rc.Close()
 	c.rcLock.Unlock()
@@ -302,10 +314,17 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 		return nil, err
 	}
 
-	return &TF2RconConnection{new(sync.RWMutex), rc, address, password}, nil
+	return &TF2RconConnection{
+		rc:       rc,
+		host:     address,
+		password: password}, nil
 }
 
 func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
+	if c.rc == nil {
+		return errors.New("RCON connection is nil")
+	}
+
 	c.Close()
 
 	c.rcLock.Lock()
