@@ -193,9 +193,7 @@ func (c *TF2RconConnection) ChangeRconPassword(password string) error {
 	_, err := c.SetConVar("rcon_password", password)
 
 	if err == nil {
-		c.rc.Close()
-		newConnection, _ := rcon.Dial(c.host, password)
-		c.rc = newConnection
+		err = c.Reconnect(1 * time.Minute)
 	}
 
 	return err
@@ -278,7 +276,9 @@ func (c *TF2RconConnection) StopLogRedirection(addr string) {
 
 // Close closes the connection
 func (c *TF2RconConnection) Close() {
+	c.rcLock.Lock()
 	c.rc.Close()
+	c.rcLock.Unlock()
 }
 
 // ExecConfig accepts a string and executes its lines one by one. Assumes
@@ -306,13 +306,12 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 }
 
 func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
-	var err error
+	c.Close()
 
 	c.rcLock.Lock()
 	defer c.rcLock.Unlock()
-
-	c.Close()
 	now := time.Now()
+	var err error
 
 	for time.Since(now) <= duration {
 		c.rc, err = rcon.Dial(c.host, c.password)
