@@ -47,12 +47,12 @@ func (c *TF2RconConnection) QueryNoResp(req string) error {
 
 // Query executes a query and returns the server responses
 func (c *TF2RconConnection) Query(req string) (string, error) {
+	c.rcLock.RLock()
+	defer c.rcLock.RUnlock()
+
 	if c.rc == nil {
 		return "", errors.New("RCON connection is nil")
 	}
-
-	c.rcLock.RLock()
-	defer c.rcLock.RUnlock()
 
 	reqID, reqErr := c.rc.Write(req)
 	if reqErr != nil {
@@ -284,12 +284,10 @@ func (c *TF2RconConnection) StopLogRedirection(addr string) {
 
 // Close closes the connection
 func (c *TF2RconConnection) Close() {
-	if c.rc == nil {
-		return
-	}
-
 	c.rcLock.Lock()
-	c.rc.Close()
+	if c.rc != nil {
+		c.rc.Close()
+	}
 	c.rcLock.Unlock()
 }
 
@@ -321,14 +319,15 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 }
 
 func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
-	if c.rc == nil {
-		return errors.New("RCON connection is nil")
-	}
-
 	c.Close()
 
 	c.rcLock.Lock()
 	defer c.rcLock.Unlock()
+
+	if c.rc == nil {
+		return errors.New("RCON connection is nil")
+	}
+
 	now := time.Now()
 	var err error
 
