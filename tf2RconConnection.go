@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/james4k/rcon"
@@ -16,8 +17,9 @@ type TF2RconConnection struct {
 	rcLock sync.RWMutex
 	rc     *rcon.RemoteConsole
 
-	host     string
-	password string
+	host         string
+	password     string
+	reconnecting *int32
 }
 
 var (
@@ -313,21 +315,31 @@ func NewTF2RconConnection(address, password string) (*TF2RconConnection, error) 
 	}
 
 	return &TF2RconConnection{
-		rc:       rc,
-		host:     address,
-		password: password}, nil
+		rc:           rc,
+		host:         address,
+		password:     password,
+		reconnecting: new(int32),
+	}, nil
 }
 
 func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
-	c.Close()
+	if atomic.LoadInt32(c.reconnecting) == 1 {
+		c.rcLock.RLock()
+		c.rcLock.RUnlock()
+		return nil
+	}
 
 	c.rcLock.Lock()
 	defer c.rcLock.Unlock()
+
+	atomic.StoreInt32(c.reconnecting, 1)
+	defer atomic.StoreInt32(c.reconnecting, 0)
 
 	if c.rc == nil {
 		return errors.New("RCON connection is nil")
 	}
 
+	c.rc.Close()
 	now := time.Now()
 	var err error
 
