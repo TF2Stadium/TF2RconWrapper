@@ -63,7 +63,9 @@ type Source struct {
 
 func (s *Source) Logs() *bytes.Buffer {
 	s.logsMu.RLock()
-	logs := bytes.NewBuffer(s.logs.Bytes())
+	slice := make([]byte, s.logs.Len())
+	s.logs.Read(slice)
+	logs := bytes.NewBuffer(slice)
 	s.logsMu.RUnlock()
 
 	return logs
