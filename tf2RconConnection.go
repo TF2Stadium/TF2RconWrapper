@@ -34,12 +34,12 @@ func (c UnknownCommand) Error() string {
 }
 
 func (c *TF2RconConnection) QueryNoResp(req string) error {
+	c.rcLock.RLock()
+	defer c.rcLock.RUnlock()
+
 	if c.rc == nil {
 		return errors.New("RCON connection is nil")
 	}
-
-	c.rcLock.RLock()
-	defer c.rcLock.RUnlock()
 
 	_, err := c.rc.Write(req)
 	return err
