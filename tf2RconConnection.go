@@ -335,11 +335,10 @@ func (c *TF2RconConnection) Reconnect(duration time.Duration) error {
 	atomic.StoreInt32(c.reconnecting, 1)
 	defer atomic.StoreInt32(c.reconnecting, 0)
 
-	if c.rc == nil {
-		return errors.New("RCON connection is nil")
+	if c.rc != nil {
+		c.rc.Close()
 	}
 
-	c.rc.Close()
 	now := time.Now()
 	var err error
 
