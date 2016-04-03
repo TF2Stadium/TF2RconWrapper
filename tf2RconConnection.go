@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/james4k/rcon"
+	"github.com/TF2Stadium/rcon"
 )
 
 // TF2RconConnection represents a rcon connection to a TF2 server
@@ -62,7 +62,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 		return "", reqErr
 	}
 
-	resp, respID, respErr := c.rc.Read()
+	resp, respID, respErr := c.rc.Read(5 * time.Second)
 	if respErr != nil {
 		// log.Println(respErr)
 		return "", respErr
@@ -77,7 +77,7 @@ func (c *TF2RconConnection) Query(req string) (string, error) {
 			return "", errors.New("Couldn't get a response.")
 		} else {
 			counter--
-			resp, respID, respErr = c.rc.Read()
+			resp, respID, respErr = c.rc.Read(5 * time.Second)
 			if respErr != nil {
 				// log.Println(respErr)
 				return "", reqErr
